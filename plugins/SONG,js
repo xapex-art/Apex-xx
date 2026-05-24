@@ -9,112 +9,211 @@ cmd({
     react: "🎧",
     filename: __filename
 },
-async (conn, mek, m, { from, quoted, body, isCmd, command, args, q, isGroup, sender, senderNumber, botNumber2, botNumber, pushname, isMe, isOwner, groupMetadata, groupName, participants, groupAdmins, isBotAdmins, isAdmins, reply }) => {
+async (conn, mek, m, {
+    from,
+    q,
+    reply
+}) => {
+
     try {
-        if (!q) return reply(`━━━━━━━━━━━━━━━━━━━\n\n│ \`Example\`\n│ • \`.song waiwara\`\n\n━━━━━━━━━━━━━━━━━━━`);
-        
-        // React with 🔄 while searching
-        await conn.sendMessage(from, { react: { text: "🔄", key: mek.key } });
-        
+
+        if (!q) {
+            return reply(
+`━━━━━━━━━━━━━━━━━━━
+
+│ Example
+│ • .song waiwara
+
+━━━━━━━━━━━━━━━━━━━`
+            );
+        }
+
+        // react searching
+        await conn.sendMessage(from, {
+            react: {
+                text: "🔄",
+                key: mek.key
+            }
+        });
+
         const search = await yts(q);
         const data = search.videos[0];
-        
-        if (!data) return reply(`❌ *Song not found!*`);
-        
-        let caption = `*🎵 SONG DOWNLOADER*
-━━━━━━━━━━━━━━━━━━━
 
-│ • \`TITLE\` - ${data.title}
-│ • \`DATE\` - ${data.ago}
-│ • \`DURATION\` - ${data.timestamp}
-│ • \`VIEWS\` - ${data.views}
-│ • \`LINK\` - ${data.url}
+        if (!data) {
+            return reply("❌ Song not found!");
+        }
+
+        let caption =
+`🎵 *SONG DOWNLOADER*
 
 ━━━━━━━━━━━━━━━━━━━
+│ • TITLE : ${data.title}
+│ • DATE : ${data.ago}
+│ • DURATION : ${data.timestamp}
+│ • VIEWS : ${data.views}
+│ • LINK : ${data.url}
+━━━━━━━━━━━━━━━━━━━
 
-\`1️⃣ : 🎧 AUDIO FILE\`
-\`2️⃣ : 📁 DOCUMENT FILE\`
-\`3️⃣ : 🎤 VOICE NOTE\`
+1️⃣ AUDIO FILE
+2️⃣ DOCUMENT FILE
+3️⃣ VOICE NOTE
 
-> \`\`\`Developed by ChiraNx 🌸\`\`\``;
+Developed by ChiraNx 🌸`;
 
-        await conn.sendMessage(from, { image: { url: data.thumbnail }, caption: caption }, { quoted: mek });
+        await conn.sendMessage(from, {
+            image: {
+                url: data.thumbnail
+            },
+            caption: caption
+        }, {
+            quoted: mek
+        });
+
     } catch (e) {
         console.log(e);
-        reply(`❌ Error: ${e.message || e}`);
+
+        reply(`❌ Error : ${e.message}`);
     }
 });
+
+
+// ================= RESPONSE HANDLER =================
 
 cmd({
     on: "body"
 },
-async (conn, mek, m, { from, body, pushname, reply }) => {
+async (conn, mek, m, {
+    from,
+    body
+}) => {
+
     try {
+
         if (!body) return;
-        const replyMatch = body.trim();
-        
-        if (replyMatch === "1" || replyMatch === "2" || replyMatch === "3") {
-            if (mek.message && mek.message.extendedTextMessage && mek.message.extendedTextMessage.contextInfo && mek.message.extendedTextMessage.contextInfo.quotedMessage) {
-                const quotedMsg = mek.message.extendedTextMessage.contextInfo.quotedMessage;
-                // Get caption from imageMessage
-                const caption = quotedMsg.imageMessage ? quotedMsg.imageMessage.caption : "";
-                
-                if (caption.includes("SONG DOWNLOADER") && caption.includes("ChiraNx")) {
-                    await conn.sendMessage(from, { react: { text: "⬇️", key: mek.key } });
-                    
-                    const urlMatch = caption.match(/(?:https?:\/\/)?(?:www\.)?(?:youtube\.com|youtu\.be)\/(?:watch\?v=)?([a-zA-Z0-9_-]{11})/);
-                    if (!urlMatch) {
-                        return reply("❌ *YouTube Link Not Found in Caption!*");
-                    }
-                    const vUrl = "https://www.youtube.com/watch?v=" + urlMatch[1];
-                    
-                    let titleMatch = caption.match(/`TITLE` - (.+)/);
-                    let title = titleMatch ? titleMatch[1].trim() : "Song";
-                    
-                    try {
-                        let dlUrl = "";
-                        
-                        // TRY API 1 (Provided by you earlier)
-                        try {
-                            let apiUrl1 = `https://api-ytdlwsmd-mini.vercel.app/api/download?url=${encodeURIComponent(vUrl)}`;
-                            let response1 = await axios.get(apiUrl1);
-                            dlUrl = response1.data?.data?.download || response1.data?.result?.downloadUrl || response1.data?.url;
-                        } catch (err) {
-                            console.log("API 1 Failed");
-                        }
 
-                        // TRY API 2 (Fallback API)
-                        if (!dlUrl) {
-                            let apiUrl2 = `https://www.movanest.xyz/v2/ytmp3?url=${encodeURIComponent(vUrl)}`;
-                            let response2 = await axios.get(apiUrl2);
-                            dlUrl = response2.data?.result?.downloadUrl || response2.data?.data?.download;
-                        }
+        const text = body.trim();
 
-                        if (!dlUrl) {
-                            await conn.sendMessage(from, { react: { text: "❌", key: mek.key } });
-                            return reply("❌ *Failed to fetch download link. Alternative APIs might be down.*");
-                        }
+        if (text === "1" || text === "2" || text === "3") {
 
-                        await conn.sendMessage(from, { react: { text: "⬆️", key: mek.key } });
-                        
-                        if (replyMatch === "1") {
-                            await conn.sendMessage(from, { audio: { url: dlUrl }, mimetype: "audio/mpeg" }, { quoted: mek });
-                        } else if (replyMatch === "2") {
-                            await conn.sendMessage(from, { document: { url: dlUrl }, mimetype: "audio/mpeg", fileName: title + ".mp3" }, { quoted: mek });
-                        } else if (replyMatch === "3") {
-                            await conn.sendMessage(from, { audio: { url: dlUrl }, mimetype: "audio/mpeg", ptt: true }, { quoted: mek });
-                        }
-                        
-                        await conn.sendMessage(from, { react: { text: "✅", key: mek.key } });
+            const quoted =
+                mek.message?.extendedTextMessage?.contextInfo?.quotedMessage;
 
-                    } catch (apiError) {
-                        console.error("API Fetch Error:", apiError);
-                        await conn.sendMessage(from, { react: { text: "❌", key: mek.key } });
-                        reply(`❌ *Network/API Error occurred.*`);
-                    }
+            if (!quoted) return;
+
+            const caption =
+                quoted?.imageMessage?.caption || "";
+
+            if (!caption.includes("SONG DOWNLOADER")) return;
+
+            // react downloading
+            await conn.sendMessage(from, {
+                react: {
+                    text: "⬇️",
+                    key: mek.key
                 }
+            });
+
+            // extract youtube url
+            const urlMatch = caption.match(
+                /(https?:\/\/(?:www\.)?(?:youtube\.com|youtu\.be)\/[^\s]+)/gi
+            );
+
+            if (!urlMatch) {
+                return;
             }
+
+            const ytUrl = urlMatch[0];
+
+            // title
+            let titleMatch = caption.match(/TITLE : (.*)/);
+
+            let title = titleMatch
+                ? titleMatch[1]
+                : "song";
+
+            // api
+            const api =
+`https://ytdl-new-dxz.vercel.app/api/ytmp3?url=${encodeURIComponent(ytUrl)}`;
+
+            const res = await axios.get(api);
+
+            console.log(res.data);
+
+            // download link
+            const dlUrl =
+                res.data?.result?.downloadUrl ||
+                res.data?.result?.url;
+
+            if (!dlUrl) {
+                return conn.sendMessage(from, {
+                    text: "❌ Download failed"
+                }, {
+                    quoted: mek
+                });
+            }
+
+            // uploading react
+            await conn.sendMessage(from, {
+                react: {
+                    text: "⬆️",
+                    key: mek.key
+                }
+            });
+
+            // OPTION 1
+            if (text === "1") {
+
+                await conn.sendMessage(from, {
+                    audio: {
+                        url: dlUrl
+                    },
+                    mimetype: "audio/mpeg"
+                }, {
+                    quoted: mek
+                });
+
+            }
+
+            // OPTION 2
+            else if (text === "2") {
+
+                await conn.sendMessage(from, {
+                    document: {
+                        url: dlUrl
+                    },
+                    mimetype: "audio/mpeg",
+                    fileName: `${title}.mp3`
+                }, {
+                    quoted: mek
+                });
+
+            }
+
+            // OPTION 3
+            else if (text === "3") {
+
+                await conn.sendMessage(from, {
+                    audio: {
+                        url: dlUrl
+                    },
+                    mimetype: "audio/mpeg",
+                    ptt: true
+                }, {
+                    quoted: mek
+                });
+
+            }
+
+            // success react
+            await conn.sendMessage(from, {
+                react: {
+                    text: "✅",
+                    key: mek.key
+                }
+            });
+
         }
+
     } catch (e) {
         console.log(e);
     }
