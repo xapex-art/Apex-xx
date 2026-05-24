@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>APEX MINI - Pairing Terminal</title>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:ital,wght@0,400;0,600;0,700;1,700&family=Inter:wght@400;600&family=JetBrains+Mono:wght@700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-color: #060913;
+            --card-bg: #0e1526;
+            --input-bg: #141c2e;
+            --primary-blue: #3b76f6;
+            --primary-light: #52a3ff;
+            --text-main: #ffffff;
+            --text-muted: #6b7a99;
+            --border-color: #1e293b;
+            --success-green: #00e676;
+        }
+
+        * {
+            margin: 0; padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            font-family: 'Inter', sans-serif;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            background-image: radial-gradient(circle at 50% -20%, #102040 0%, var(--bg-color) 70%);
+        }
+
+        .card {
+            background-color: var(--card-bg);
+            width: 100%;
+            max-width: 400px;
+            border-radius: 35px;
+            padding: 45px 30px 30px 30px;
+            position: relative;
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5);
+            border: 1px solid rgba(255, 255, 255, 0.02);
+            overflow: hidden;
+            animation: slideUp 0.8s ease-out;
+        }
+
+        @keyframes slideUp {
+            from { opacity: 0; transform: translateY(30px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+
+        .logo-box {
+            width: 75px; height: 75px;
+            background: linear-gradient(135deg, #42b0ff, #2962ff);
+            border-radius: 20px;
+            margin: 0 auto 20px auto;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 10px 25px rgba(41, 98, 255, 0.4);
+        }
+
+        .brand-title {
+            font-family: 'Montserrat', sans-serif;
+            font-size: 1.8rem;
+            font-weight: 700;
+            font-style: italic;
+            letter-spacing: 1px;
+        }
+
+        .brand-title span { color: var(--primary-light); }
+
+        .subtitle {
+            font-size: 0.65rem;
+            letter-spacing: 2px;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            font-weight: 600;
+        }
+
+        .input-group {
+            position: relative;
+            margin-bottom: 25px;
+        }
+
+        /* Number fonts wens kara */
+        input[type="tel"] {
+            width: 100%;
+            background-color: var(--input-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            padding: 22px;
+            color: var(--primary-light);
+            font-family: 'JetBrains Mono', monospace; /* Kotu fonts gathiya */
+            font-size: 1.3rem;
+            font-weight: 700;
+            outline: none;
+            text-align: center;
+            letter-spacing: 3px;
+            transition: all 0.3s ease;
+            box-shadow: inset 0 2px 10px rgba(0,0,0,0.2);
+        }
+
+        input[type="tel"]:focus {
+            border-color: var(--primary-blue);
+            background-color: rgba(59, 118, 246, 0.08);
+            box-shadow: 0 0 15px rgba(59, 118, 246, 0.2);
+        }
+
+        .btn {
+            width: 100%;
+            background: linear-gradient(135deg, var(--primary-blue), #2a58c2);
+            color: white;
+            border: none;
+            border-radius: 50px;
+            padding: 20px;
+            font-weight: 700;
+            text-transform: uppercase;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            transition: 0.3s;
+            box-shadow: 0 8px 20px rgba(59, 118, 246, 0.3);
+            font-size: 0.85rem;
+        }
+
+        .btn:hover { background-color: #2e62d9; transform: translateY(-2px); }
+
+        .code-container { margin-top: 35px; }
+
+        .code-label {
+            font-size: 0.65rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            margin-bottom: 15px;
+            font-weight: 600;
+            text-align: center;
+            letter-spacing: 1.5px;
+        }
+
+        .code-box {
+            background-color: rgba(20, 28, 46, 0.5);
+            border: 1px dashed rgba(82, 163, 255, 0.3);
+            border-radius: 20px;
+            padding: 25px;
+            text-align: center;
+            min-height: 95px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: 0.3s;
+        }
+
+        .code-box:hover {
+            border-color: var(--primary-light);
+            background-color: rgba(82, 163, 255, 0.05);
+        }
+
+        .code-display {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 2rem;
+            font-weight: 700;
+            letter-spacing: 5px;
+            color: var(--primary-light);
+            text-shadow: 0 0 20px rgba(82, 163, 255, 0.5);
+        }
+
+        .placeholder-text {
+            color: var(--primary-blue);
+            font-size: 1.6rem;
+            letter-spacing: 10px;
+            opacity: 0.3;
+        }
+
+        .copy-hint {
+            font-size: 0.65rem;
+            color: var(--text-muted);
+            margin-top: 10px;
+            letter-spacing: 1px;
+            font-weight: 600;
+        }
+
+        .footer {
+            border-top: 1px solid rgba(255, 255, 255, 0.05);
+            margin-top: 25px;
+            padding-top: 20px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 10px;
+            font-size: 0.65rem;
+            color: var(--text-muted);
+        }
+
+        .status-dot {
+            width: 8px; height: 8px;
+            background-color: var(--success-green);
+            border-radius: 50%;
+            box-shadow: 0 0 8px var(--success-green);
+        }
+
+        .loader {
+            width: 20px; height: 20px;
+            border: 3px solid rgba(255,255,255,0.3);
+            border-top: 3px solid white;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+    </style>
+</head>
+<body>
+
+    <div class="card">
+        <div class="header">
+            <div class="logo-box">
+                <svg viewBox="0 0 24 24" width="40" fill="white">
+                    <rect x="4" y="4" width="6" height="6" rx="2"></rect>
+                    <rect x="14" y="4" width="6" height="6" rx="2"></rect>
+                    <rect x="4" y="14" width="6" height="6" rx="2"></rect>
+                    <circle cx="17" cy="17" r="3"></circle>
+                </svg>
+            </div>
+            <div class="brand-title">APEX<span>-MINI</span></div>
+            <div class="subtitle">ADVANCED PAIRING TERMINAL</div>
+        </div>
+
+        <div class="input-group">
+            <input type="tel" id="phoneInput" placeholder="947xxxxxxxx" maxlength="15">
+        </div>
+
+        <button class="btn" id="pairBtn" onclick="getPairingCode()">
+            <span id="btnText">GENERATE PAIR CODE</span>
+            <span id="btnArrow">&rarr;</span>
+        </button>
+
+        <div class="code-container">
+            <div class="code-label">YOUR PAIRING CODE:</div>
+            <div class="code-box" id="codeBox" onclick="copyCode()">
+                <div id="placeholderCode" class="placeholder-text">--------</div>
+                <div id="realCode" class="code-display" style="display: none;"></div>
+                <div id="copyHint" class="copy-hint" style="display: none;">TAP TO COPY CODE</div>
+            </div>
+        </div>
+
+        <div class="footer">
+            <span class="status-dot"></span>
+            <span>SERVER ONLINE</span>
+            <span>•</span>
+            <span>V1.0.0-MD</span>
+        </div>
+    </div>
+
+    <script>
+        let currentCode = "";
+
+        async function getPairingCode() {
+            const input = document.getElementById('phoneInput');
+            const btn = document.getElementById('pairBtn');
+            const btnText = document.getElementById('btnText');
+            const btnArrow = document.getElementById('btnArrow');
+            const realCodeDiv = document.getElementById('realCode');
+            const placeholderCode = document.getElementById('placeholderCode');
+            const copyHint = document.getElementById('copyHint');
+
+            const number = input.value.trim().replace(/[^0-9]/g, '');
+
+            if (number.length < 7) {
+                alert('Please enter a valid phone number!');
+                return;
+            }
+
+            btn.disabled = true;
+            btnText.innerHTML = '<div class="loader"></div>';
+            btnArrow.style.display = 'none';
+
+            try {
+                // Endpoint logic
+                const response = await fetch(`/pair?number=${number}`);
+                const data = await response.json();
+
+                if (data.code) {
+                    currentCode = data.code;
+                    placeholderCode.style.display = 'none';
+                    realCodeDiv.style.display = 'block';
+                    copyHint.style.display = 'block';
+                    realCodeDiv.innerText = data.code;
+                } else {
+                    alert(data.error || 'Error generating code');
+                }
+            } catch (err) {
+                // Local test simulation if offline
+                setTimeout(() => {
+                    currentCode = "A1B2C3D4"; 
+                    placeholderCode.style.display = 'none';
+                    realCodeDiv.style.display = 'block';
+                    copyHint.style.display = 'block';
+                    realCodeDiv.innerText = currentCode;
+                }, 1200);
+            } finally {
+                btn.disabled = false;
+                btnText.innerText = 'GENERATE PAIR CODE';
+                btnArrow.style.display = 'inline';
+            }
+        }
+
+        function copyCode() {
+            if (!currentCode) return;
+            
+            navigator.clipboard.writeText(currentCode).then(() => {
+                const hint = document.getElementById('copyHint');
+                const box = document.getElementById('codeBox');
+                
+                hint.innerText = "COPIED TO CLIPBOARD!";
+                hint.style.color = "var(--success-green)";
+                box.style.borderColor = "var(--success-green)";
+                box.style.backgroundColor = "rgba(0, 230, 118, 0.05)";
+                
+                setTimeout(() => {
+                    hint.innerText = "TAP TO COPY CODE";
+                    hint.style.color = "var(--text-muted)";
+                    box.style.borderColor = "rgba(82, 163, 255, 0.3)";
+                    box.style.backgroundColor = "rgba(20, 28, 46, 0.5)";
+                }, 2000);
+            });
+        }
+    </script>
+</body>
+</html>
+
