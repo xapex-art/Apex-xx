@@ -69,16 +69,21 @@ async (conn, mek, m, { from, q, sender, reply }) => {
 
 cmd({ on: "body" }, async (conn, mek, m, { from, body, sender, reply }) => {
     try {
-        const quotedId = m.msg?.contextInfo?.stanzaId;
+        // Robust extraction of Reply ID
+        const quotedId = m.quoted?.id || m.msg?.contextInfo?.stanzaId || mek.message?.extendedTextMessage?.contextInfo?.stanzaId;
         if (!quotedId) return;
+
+        // Robust extraction of Message Text
+        const text = body || m.body || mek.message?.conversation || mek.message?.extendedTextMessage?.text || "";
+        if (!text) return;
 
         // STEP 2: Movie Selection
         if (cinesubzSearchSessions[quotedId]) {
             const session = cinesubzSearchSessions[quotedId];
-            if (session.user !== sender) return reply('❌ *This is not your session!*');
             
-            const num = parseInt(body.trim());
-            if (isNaN(num) || num < 1 || num > session.results.length) return reply('❌ *Invalid selection. Reply with a valid number.*');
+            const num = parseInt(text.trim());
+            if (isNaN(num)) return; // Ignore if user replies with non-number text
+            if (num < 1 || num > session.results.length) return reply('❌ *Invalid selection. Reply with a valid number.*');
             
             const selectedMovie = session.results[num - 1];
             await conn.sendMessage(from, { react: { text: "🔄", key: mek.key } });
@@ -140,10 +145,10 @@ cmd({ on: "body" }, async (conn, mek, m, { from, body, sender, reply }) => {
         // STEP 3: Download Selection with Heroku Stream Opt.
         if (cinesubzDownloadSessions[quotedId]) {
             const session = cinesubzDownloadSessions[quotedId];
-            if (session.user !== sender) return reply('❌ *This is not your session!*');
             
-            const num = parseInt(body.trim());
-            if (isNaN(num) || num < 1 || num > session.downloads.length) return reply('❌ *Invalid selection. Reply with a valid number.*');
+            const num = parseInt(text.trim());
+            if (isNaN(num)) return;
+            if (num < 1 || num > session.downloads.length) return reply('❌ *Invalid selection. Reply with a valid number.*');
             
             const selectedDl = session.downloads[num - 1];
             // Extract final direct link from object
