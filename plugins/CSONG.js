@@ -4,11 +4,7 @@ const axios = require("axios");
 const fs = require("fs");
 const os = require("os");
 const path = require("path");
-const ffmpeg = require("fluent-ffmpeg");
-const ffmpegPath = require("ffmpeg-static");
 const yts = require("yt-search");
-
-if (ffmpegPath) ffmpeg.setFfmpegPath(ffmpegPath);
 
 cmd({
     pattern: "csong",
@@ -42,10 +38,12 @@ async (conn, mek, m, { from, args, reply, isOwner }) => {
             );
         }
 
+        await reply("🔎 *Searching song...*");
+
         const search = await yts(query);
 
         if (!search?.videos?.length) {
-            return await reply("❌ *ගීතය හමුනොවුණා!*");
+            return await reply("❌ *Song not found!*");
         }
 
         const data = search.videos[0];
@@ -69,12 +67,7 @@ async (conn, mek, m, { from, args, reply, isOwner }) => {
 
         const tempMp3 = path.join(
             os.tmpdir(),
-            `csong_temp_${Date.now()}.mp3`
-        );
-
-        const tempOpus = path.join(
-            os.tmpdir(),
-            `csong_temp_${Date.now()}.opus`
+            `csong_${Date.now()}.mp3`
         );
 
         const mp3Res = await axios.get(mp3Url, {
@@ -87,43 +80,7 @@ async (conn, mek, m, { from, args, reply, isOwner }) => {
         );
 
         if (!fs.existsSync(tempMp3)) {
-            return await reply("❌ *MP3 ගොනුව සාදන ලදි නැහැ!*");
-        }
-
-        let opusReady = false;
-
-        try {
-
-            await new Promise((resolve, reject) => {
-
-                ffmpeg(tempMp3)
-                    .audioCodec("libopus")
-                    .format("opus")
-
-                    .on("end", () => {
-
-                        if (fs.existsSync(tempOpus)) {
-                            opusReady = true;
-                            resolve();
-                        } else {
-                            reject(new Error("No opus file created"));
-                        }
-
-                    })
-
-                    .on("error", (err) => {
-                        console.error("❌ FFmpeg Error:", err.message);
-                        reject(err);
-                    })
-
-                    .save(tempOpus);
-
-            });
-
-        } catch (err) {
-
-            console.warn("⚠️ Opus conversion failed. Fallback to MP3.");
-
+            return await reply("❌ *MP3 file create failed!*");
         }
 
         let channelname = targetJid;
@@ -143,74 +100,52 @@ async (conn, mek, m, { from, args, reply, isOwner }) => {
 
         const caption = `\`\`\`The song was uploaded by the owner:Gavishka Manidu 😘🇱🇰\`\`\`
 
-*📃 Title: “ ${result.title} ”*
-	
-❒ *🎭 Vɪᴇᴡꜱ :* ${data.views}
-❒ *⏱️ Dᴜʀᴀᴛɪᴏɴ :* ${data.timestamp}
-❒ *📅 Rᴇʟᴇᴀꜱᴇ Dᴀᴛᴇ :* ${data.ago} 
+*📃 Title:* ${result.title}
 
-‎*00.00 ─〇─────  ${data.timestamp} ⏳* 
+❒ *🎭 Views :* ${data.views}
+❒ *⏱️ Duration :* ${data.timestamp}
+❒ *📅 Release Date :* ${data.ago}
 
- \`⇄   ◃◃   ⅠⅠ   ▹▹   ↻\`
-‎
-*⊷ ‎හිතෙ තියෙන සස්සන රිඇක්‍ට් එක ඕනී ලමයෝ 🥺💖🫶*
-‎
-> _ᴍᴀɪɴᴅ ʀᴇʟᴀx ꜱᴏɴɢ 💆‍♂️🎶_
-‎
-*‎ Use headphones for best experience 🎧*
+*00:00 ─❍────── ${data.timestamp}*
+
+\`⇄   ◃◃   ⅠⅠ   ▹▹   ↻\`
+
+*⊷ හිතෙ තියෙන සස්සන රිඇක්‍ට් එක ඕනී ලමයෝ 🥺💖🫶*
+
+> _ᴍɪɴᴅ ʀᴇʟᴀx ꜱᴏɴɢ 💆‍♂️🎶_
+
+*Use headphones for best experience 🎧*
 
 > *${channelname}*`;
 
         try {
 
-            console.log(`📤 Sending image & caption to: ${targetJid}`);
+            console.log(`📤 Sending image to: ${targetJid}`);
 
             await conn.sendMessage(targetJid, {
                 image: { url: data.thumbnail },
-                caption: caption,
+                caption: caption
             });
 
         } catch (err) {
 
-            console.error("❌ Thumbnail Send Error:", err);
-
-            await reply(
-                `*ɪᴍᴀɢᴇ ꜱᴇɴᴅɪɴɢ ᴇʀʀᴏʀ ❌* \n\n\`\`\`${err.message || err}\`\`\``
-            );
+            console.error("❌ Image Send Error:", err);
 
         }
 
         try {
 
-            console.log(`📤 Sending Audio to: ${targetJid}`);
-
-            const audioBuffer = opusReady && fs.existsSync(tempOpus)
-                ? fs.readFileSync(tempOpus)
-                : fs.readFileSync(tempMp3);
+            console.log(`📤 Sending audio to: ${targetJid}`);
 
             await conn.sendMessage(targetJid, {
 
-                audio: audioBuffer,
+                audio: fs.readFileSync(tempMp3),
 
                 mimetype: "audio/mpeg",
 
                 ptt: false,
 
-                fileName: `${result.title}.mp3`,
-
-                waveform: [100,0,100,0,100,0,100],
-
-                contextInfo: {
-                    externalAdReply: {
-                        title: result.title,
-                        body: data.author?.name || "WhatsApp Channel Song",
-                        thumbnailUrl: data.thumbnail,
-                        mediaType: 1,
-                        renderLargerThumbnail: false,
-                        showAdAttribution: false,
-                        sourceUrl: ytUrl
-                    }
-                }
+                fileName: `${result.title}.mp3`
 
             });
 
@@ -223,17 +158,13 @@ async (conn, mek, m, { from, args, reply, isOwner }) => {
             console.error("❌ Audio Send Error:", err);
 
             await reply(
-                `*ᴀᴜᴅɪᴏ ꜱᴇɴᴅɪɴɢ ᴇʀʀᴏʀ ❌* \n\n\`\`\`${err.message || err}\`\`\``
+                `*ᴀᴜᴅɪᴏ ꜱᴇɴᴅɪɴɢ ᴇʀʀᴏʀ ❌*\n\n\`\`\`${err.message || err}\`\`\``
             );
 
         }
 
         if (fs.existsSync(tempMp3)) {
             fs.unlinkSync(tempMp3);
-        }
-
-        if (fs.existsSync(tempOpus)) {
-            fs.unlinkSync(tempOpus);
         }
 
     } catch (e) {
