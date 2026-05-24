@@ -8,7 +8,7 @@
     "dev": "nodemon pair.js"
   },
   "dependencies": {
-    "@whiskeysockets/baileys": "github:XdKing2/Malvin-Baileys",
+    "@whiskeysockets/baileys": "npm:gifted:baileys",
     "@cacheable/node-cache": "^1.4.0",
     "@hapi/boom": "^9.1.3",
     "axios": "^1.6.0",
