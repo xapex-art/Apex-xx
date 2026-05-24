@@ -1,0 +1,120 @@
+const { cmd, commands } = require('../command');
+const axios = require("axios");
+const yts = require("yt-search");
+const fs = require("fs");
+
+// 1. ගීතය Search කරලා Buttons යවන Command එක
+cmd({
+    pattern: "song",
+    alias: ["ytmp3", "play"],
+    react: "🎧",
+    desc: "Search and download songs",
+    category: "download",
+    use: ".song <song name>",
+    filename: __filename
+},
+async (conn, mek, m, { from, args, reply, pushname }) => {
+    try {
+        const query = args.join(" ");
+        if (!query) {
+            return await reply("❌ *කරුණාකර සිංදුවක නමක් ලබාදෙන්න!* \n\n*උදාහරණ:* `.song lelena`");
+        }
+
+        const search = await yts(query);
+        if (!search?.videos?.length) return await reply("❌ *ගීතය හමුනොවුණා!*");
+
+        const data = search.videos[0];
+        const ytUrl = data.url;
+
+        const caption = `*🎧 SONG DOWNLOADER 🎧*
+
+*📃 Title:* “ ${data.title} ”
+*🎭 Views:* ${data.views}
+*⏱️ Duration:* ${data.timestamp}
+*📅 Uploaded:* ${data.ago}
+
+> *Select a format below to download:*`;
+
+        // Buttons 3 ක් නිර්මාණය කිරීම
+        const buttons = [
+            { buttonId: `.ytmp3dl ${ytUrl} audio`, buttonText: { displayText: '🎵 AUDIO' }, type: 1 },
+            { buttonId: `.ytmp3dl ${ytUrl} doc`, buttonText: { displayText: '📂 DOCUMENT' }, type: 1 },
+            { buttonId: `.ytmp3dl ${ytUrl} voice`, buttonText: { displayText: '🎤 VOICE NOTE' }, type: 1 }
+        ];
+
+        const buttonMessage = {
+            image: { url: data.thumbnail },
+            caption: caption,
+            footer: 'Gavishka Manidu 🇱🇰',
+            buttons: buttons,
+            headerType: 4
+        };
+
+        // Message එක යැවීම
+        await conn.sendMessage(from, buttonMessage, { quoted: mek });
+
+    } catch (e) {
+        console.error("Song command error:", e);
+        await reply(`*දෝෂයක් ඇතිවිය ❌*\n\n\`\`\`${e.message}\`\`\``);
+    }
+});
+
+// 2. Buttons ක්ලික් කලාම Download එක කරන Command එක
+cmd({
+    pattern: "ytmp3dl",
+    dontAddCommandList: true, // මේක help list එක පෙන්නන්නෙ නෑ
+    filename: __filename
+},
+async (conn, mek, m, { from, args, reply }) => {
+    try {
+        const url = args[0];
+        const type = args[1]; // audio, doc, voice
+
+        if (!url || !type) return;
+
+        await reply("🔄 *ඩවුන්ලෝඩ් වෙමින් පවතී... කරුණාකර රැදී සිටින්න.*");
+
+        // API එක හරහා Download URL එක ගැනීම
+        const apiUrl = `https://api-ytdlwsmd-mini.vercel.app/api/download?url=${encodeURIComponent(url)}`;
+        const { data } = await axios.get(apiUrl);
+
+        // API එකෙන් එන response එකේ download link එක තියෙන variable එක වෙනස් වෙන්න පුලුවන්
+        // ඒ නිසා ඔයාගේ api එකේ URL එක එන්නෙ "download_url" කියන එකෙන්ද කියලා තහවුරු කරගන්න
+        const downloadUrl = data.download_url || data.result?.downloadUrl || data.url; 
+
+        if (!downloadUrl) {
+            return await reply("❌ *API දෝෂයක්. පසුව නැවත උත්සාහ කරන්න.*");
+        }
+
+        // තෝරාගත් අකාරයට Media එක යැවීම
+        if (type === "audio") {
+            await conn.sendMessage(from, {
+                audio: { url: downloadUrl },
+                mimetype: "audio/mpeg",
+                ptt: false
+            }, { quoted: mek });
+            
+        } else if (type === "doc") {
+            await conn.sendMessage(from, {
+                document: { url: downloadUrl },
+                mimetype: "audio/mpeg",
+                fileName: `Song.mp3`,
+                caption: "> *Downloaded successfully 🎧*"
+            }, { quoted: mek });
+            
+        } else if (type === "voice") {
+            // Voice note යැවීමට
+            await conn.sendMessage(from, {
+                audio: { url: downloadUrl },
+                mimetype: "audio/ogg; codecs=opus",
+                ptt: true // මේක true කරාම voice record එකක් වගේ යන්නෙ
+            }, { quoted: mek });
+        }
+
+        await reply(`✅ *සාර්ථකයි! අදාල ගීතය යවන ලදි.* 🌝💗`);
+
+    } catch (e) {
+        console.error("Download Error:", e);
+        await reply(`*ඩවුන්ලෝඩ් කිරීමේ දෝෂයක් ❌*\n\n\`\`\`${e.message}\`\`\``);
+    }
+});
