@@ -1,9 +1,13 @@
 const { cmd } = require('../command');
 const axios = require('axios');
 
-// In-memory sessions to trace replies
+// In-memory sessions
 const cinesubzSearchSessions = {};
 const cinesubzDownloadSessions = {};
+
+// Fallback sessions indexed by sender (user's JID) + chat ID
+const userSearchFallback = {};
+const userDownloadFallback = {};
 
 // Default configurations
 const API_KEY = "9ef976898391ecb281dc63cd40582342";
@@ -23,12 +27,9 @@ async (conn, mek, m, { from, q, sender, reply }) => {
         
         await conn.sendMessage(from, { react: { text: "🔄", key: mek.key } });
         
-        // 1. Fetch search results (FIX: Send API key in headers)
         const searchUrl = `${BASE_URL}/search?q=${encodeURIComponent(q)}`;
         const response = await axios.get(searchUrl, {
-            headers: {
-                'x-api-key': API_KEY
-            }
+            headers: { 'x-api-key': API_KEY }
         });
         const data = response.data;
         
@@ -57,7 +58,14 @@ async (conn, mek, m, { from, q, sender, reply }) => {
 
         const sentMsg = await conn.sendMessage(from, msgOptions, { quoted: mek });
         
-        cinesubzSearchSessions[sentMsg.key.id] = { user: sender, results: movies };
+        // Extract Msg ID safely for different Baileys versions
+        const msgId = sentMsg?.key?.id || sentMsg?.id || Math.random().toString(36).substring(7);
+        const sessionData = { user: sender, results: movies, time: Date.now() };
+        
+        cinesubzSearchSessions[msgId] = sessionData;
+        // Also save fallback matching sender+from
+        userSearchFallback[from + sender] = sessionData;
+
         await conn.sendMessage(from, { react: { text: "✅", key: mek.key } });
         
     } catch (e) {
@@ -69,32 +77,37 @@ async (conn, mek, m, { from, q, sender, reply }) => {
 
 cmd({ on: "body" }, async (conn, mek, m, { from, body, sender, reply }) => {
     try {
-        // Robust extraction of Reply ID
-        const quotedId = m.quoted?.id || m.msg?.contextInfo?.stanzaId || mek.message?.extendedTextMessage?.contextInfo?.stanzaId;
-        if (!quotedId) return;
-
-        // Robust extraction of Message Text
-        const text = body || m.body || mek.message?.conversation || mek.message?.extendedTextMessage?.text || "";
+        if (!sender) return;
+        const text = body || m.body || mek?.message?.conversation || mek?.message?.extendedTextMessage?.text || "";
         if (!text) return;
+        
+        // If not a number, ignore quickly
+        const num = parseInt(text.trim());
+        if (isNaN(num)) return;
 
-        // STEP 2: Movie Selection
-        if (cinesubzSearchSessions[quotedId]) {
-            const session = cinesubzSearchSessions[quotedId];
+        const quotedId = m?.quoted?.id || m?.msg?.contextInfo?.stanzaId || mek?.message?.extendedTextMessage?.contextInfo?.stanzaId;
+        const fallbackKey = from + sender;
+
+        // Check if there is an active search session for this quoted ID or fallback
+        let searchSession = cinesubzSearchSessions[quotedId];
+        
+        if (!searchSession && userSearchFallback[fallbackKey]) {
+            // Check if fallback is recent (< 2 minutes)
+            if (Date.now() - userSearchFallback[fallbackKey].time < 120000) {
+                searchSession = userSearchFallback[fallbackKey];
+            }
+        }
+
+        if (searchSession && searchSession.user === sender) {
+            if (num < 1 || num > searchSession.results.length) return reply('❌ *Invalid selection. Reply with a valid number.*');
             
-            const num = parseInt(text.trim());
-            if (isNaN(num)) return; // Ignore if user replies with non-number text
-            if (num < 1 || num > session.results.length) return reply('❌ *Invalid selection. Reply with a valid number.*');
-            
-            const selectedMovie = session.results[num - 1];
+            const selectedMovie = searchSession.results[num - 1];
             await conn.sendMessage(from, { react: { text: "🔄", key: mek.key } });
             
             const urlQuery = encodeURIComponent(selectedMovie.link || selectedMovie.url);
             
-            // FIX: Download Links are already provided in the info endpoint.
             const infoRes = await axios.get(`${BASE_URL}/info?q=${urlQuery}`, {
-                headers: {
-                    'x-api-key': API_KEY
-                }
+                headers: { 'x-api-key': API_KEY }
             });
             const infoDataWrapper = infoRes.data;
 
@@ -128,37 +141,46 @@ cmd({ on: "body" }, async (conn, mek, m, { from, body, sender, reply }) => {
             }
 
             const newMsg = await conn.sendMessage(from, msgOptions, { quoted: mek });
+            const msgId = newMsg?.key?.id || newMsg?.id || Math.random().toString(36).substring(7);
+            const dlSessionData = {
+                user: sender,
+                title: infoData.title || selectedMovie.title,
+                downloads: downloads,
+                time: Date.now()
+            };
             
             if (downloads.length > 0) {
-                cinesubzDownloadSessions[newMsg.key.id] = {
-                    user: sender,
-                    title: infoData.title || selectedMovie.title,
-                    downloads: downloads
-                };
+                cinesubzDownloadSessions[msgId] = dlSessionData;
+                userDownloadFallback[fallbackKey] = dlSessionData;
             }
             
-            delete cinesubzSearchSessions[quotedId];
+            // Clean up search session
+            if (quotedId) delete cinesubzSearchSessions[quotedId];
+            delete userSearchFallback[fallbackKey];
+            
             await conn.sendMessage(from, { react: { text: "✅", key: mek.key } });
             return;
         }
 
-        // STEP 3: Download Selection with Heroku Stream Opt.
-        if (cinesubzDownloadSessions[quotedId]) {
-            const session = cinesubzDownloadSessions[quotedId];
+        // Check if there is an active download session
+        let dlSession = cinesubzDownloadSessions[quotedId];
+        
+        if (!dlSession && userDownloadFallback[fallbackKey]) {
+            if (Date.now() - userDownloadFallback[fallbackKey].time < 120000) {
+                dlSession = userDownloadFallback[fallbackKey];
+            }
+        }
+
+        if (dlSession && dlSession.user === sender) {
+            if (num < 1 || num > dlSession.downloads.length) return reply('❌ *Invalid selection. Reply with a valid number.*');
             
-            const num = parseInt(text.trim());
-            if (isNaN(num)) return;
-            if (num < 1 || num > session.downloads.length) return reply('❌ *Invalid selection. Reply with a valid number.*');
-            
-            const selectedDl = session.downloads[num - 1];
-            // Extract final direct link from object
+            const selectedDl = dlSession.downloads[num - 1];
             const downloadLink = selectedDl.final_link || selectedDl.original_zt_link || selectedDl.url || selectedDl.link;
             
             await conn.sendMessage(from, { react: { text: "⬇️", key: mek.key } });
-            reply(`*Downloading: ${session.title} - ${selectedDl.quality}*\n_Please wait, file is downloading..._\n\n> 🚀 \`\`\`Using Memory Stream. Heroku Safe!\`\`\``);
+            reply(`*Downloading: ${dlSession.title} - ${selectedDl.quality}*\n_Please wait, file is downloading..._\n\n> 🚀 \`\`\`Using Memory Stream. Heroku Safe!\`\`\``);
             
             try {
-                // HERO-STREAMING: Avoid 512MB RAM Crash
                 const streamResponse = await axios({
                     method: 'GET',
                     url: downloadLink,
@@ -168,8 +190,8 @@ cmd({ on: "body" }, async (conn, mek, m, { from, body, sender, reply }) => {
                 await conn.sendMessage(from, { 
                     document: { stream: streamResponse.data }, 
                     mimetype: "video/mp4",
-                    fileName: `${session.title} - ${selectedDl.quality}.mp4`,
-                    caption: `🎬 *${session.title}*\n✨ Quality: ${selectedDl.quality}\n\n> \`\`\`Downloaded via Cinesubz Plugin\`\`\``
+                    fileName: `${dlSession.title} - ${selectedDl.quality}.mp4`,
+                    caption: `🎬 *${dlSession.title}*\n✨ Quality: ${selectedDl.quality}\n\n> \`\`\`Downloaded via Cinesubz Plugin\`\`\``
                 }, { quoted: mek });
                 
                 await conn.sendMessage(from, { react: { text: "✅", key: mek.key } });
@@ -179,9 +201,10 @@ cmd({ on: "body" }, async (conn, mek, m, { from, body, sender, reply }) => {
                 await conn.sendMessage(from, { react: { text: "❌", key: mek.key } });
             }
             
-            delete cinesubzDownloadSessions[quotedId];
+            if (quotedId) delete cinesubzDownloadSessions[quotedId];
+            delete userDownloadFallback[fallbackKey];
         }
     } catch (e) {
-       console.log(e);
+       console.error(e);
     }
 });
