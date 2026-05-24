@@ -114,7 +114,7 @@ async (conn, mek, m, { from, args, reply, isOwner }) => {
 ‎
 > _ᴍᴀɪɴᴅ ʀᴇʟᴀx ꜱᴏɴɢ 💆‍♂️🎶_
 ‎
-‎ ```Use headphones for best experience 🎧```
+‎ \`\`\`Use headphones for best experience 🎧\`\`\`
 
 > *{channelname}*`;
 
