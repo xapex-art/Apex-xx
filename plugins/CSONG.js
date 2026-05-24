@@ -38,6 +38,7 @@ cmd({
 
         const isChannel = targetJid.endsWith('@newsletter');
 
+        // ── Search YouTube ──────────────────────────────────────────────────────
         const search = await yts(query);
         if (!search?.videos?.length) return await reply("❌ *ගීතය හමුනොවුණා!*");
 
@@ -45,6 +46,7 @@ cmd({
         const ytUrl = data.url;
         console.log("🎬 YouTube:", ytUrl);
 
+        // ── Download from API ───────────────────────────────────────────────────
         const api = `https://www.movanest.xyz/v2/ytmp3?url=${encodeURIComponent(ytUrl)}`;
         const { data: apiRes } = await axios.get(api);
 
@@ -57,47 +59,45 @@ cmd({
         const mp3Url = result.downloadUrl;
         console.log("🎧 Download URL:", mp3Url);
 
-        const tempMp3 = path.join(os.tmpdir(), `csong_temp_${Date.now()}.mp3`);
-        const tempM4a = path.join(os.tmpdir(), `csong_temp_${Date.now()}.m4a`);
+        // ── Download MP3 to temp ────────────────────────────────────────────────
+        const ts = Date.now();
+        const tempMp3 = path.join(os.tmpdir(), `csong_${ts}.mp3`);
+        const tempOpus = path.join(os.tmpdir(), `csong_${ts}.opus`);
 
-        // Download MP3
         const mp3Res = await axios.get(mp3Url, { responseType: "arraybuffer" });
         fs.writeFileSync(tempMp3, Buffer.from(mp3Res.data));
 
         if (!fs.existsSync(tempMp3)) return await reply("❌ *MP3 ගොනුව සාදන ලදි නැහැ!*");
 
-        // ─── Convert to M4A (AAC) - works best for channels ───────────────────
-        let m4aReady = false;
+        // ── Convert MP3 → Opus (required for WA audio) ─────────────────────────
+        let opusReady = false;
         try {
             await new Promise((resolve, reject) => {
                 ffmpeg(tempMp3)
-                    .audioCodec("aac")
+                    .audioCodec("libopus")
+                    .audioFrequency(48000)
+                    .audioChannels(2)
                     .audioBitrate("128k")
-                    .format("ipod") // m4a container
+                    .format("opus")
                     .on("end", () => {
-                        if (fs.existsSync(tempM4a)) {
-                            m4aReady = true;
-                            resolve();
-                        } else reject(new Error("No m4a file created"));
+                        if (fs.existsSync(tempOpus)) { opusReady = true; resolve(); }
+                        else reject(new Error("No opus file"));
                     })
-                    .on("error", (err) => {
-                        console.error("❌ FFmpeg M4A Error:", err.message);
-                        reject(err);
-                    })
-                    .save(tempM4a);
+                    .on("error", reject)
+                    .save(tempOpus);
             });
         } catch (err) {
-            console.warn("⚠️ M4A conversion failed. Will use MP3 fallback.");
+            console.warn("⚠️ Opus failed, using MP3:", err.message);
         }
 
-        // ─── Get channel name ───────────────────────────────────────────────────
+        // ── Get channel name ────────────────────────────────────────────────────
         let channelname = targetJid;
         try {
             const metadata = await conn.newsletterMetadata("jid", targetJid);
             if (metadata?.name) channelname = metadata.name;
         } catch (_) {}
 
-        // ─── Caption ────────────────────────────────────────────────────────────
+        // ── Caption ─────────────────────────────────────────────────────────────
         const caption = `\`\`\`The song was uploaded by the owner: Gavishka Manidu 😘🇱🇰\`\`\`
 
 *📃 Title: " ${result.title} "*
@@ -118,56 +118,48 @@ cmd({
 
 > *${channelname}*`;
 
-        // ─── Send thumbnail + caption ───────────────────────────────────────────
+        // ── Send thumbnail image ─────────────────────────────────────────────────
         try {
-            console.log(`📤 Sending image & caption to: ${targetJid}`);
-            await conn.sendMessage(targetJid, {
-                image: { url: data.thumbnail },
-                caption: caption,
-            });
+            if (isChannel) {
+                await conn.newsletterSendMessage(targetJid, {
+                    image: { url: data.thumbnail },
+                    caption: caption,
+                });
+            } else {
+                await conn.sendMessage(targetJid, {
+                    image: { url: data.thumbnail },
+                    caption: caption,
+                });
+            }
         } catch (err) {
-            console.error("❌ Thumbnail Send Error:", err);
+            console.error("❌ Image Send Error:", err);
             await reply(`*ɪᴍᴀɢᴇ ꜱᴇɴᴅɪɴɢ ᴇʀʀᴏʀ ❌*\n\n\`\`\`${err.message || err}\`\`\``);
         }
 
-        // ─── Send Audio ─────────────────────────────────────────────────────────
-        // For channels (@newsletter): use audio/mp4 mimetype (NOT ogg/opus, NOT ptt)
-        // For groups/DMs: can use ptt or audio/mpeg
+        // ── Send Audio ───────────────────────────────────────────────────────────
         try {
-            console.log(`📤 Sending Audio to: ${targetJid}`);
+            const audioBuffer = opusReady && fs.existsSync(tempOpus)
+                ? fs.readFileSync(tempOpus)
+                : fs.readFileSync(tempMp3);
+
+            const mimetype = opusReady
+                ? "audio/ogg; codecs=opus"
+                : "audio/mpeg";
 
             if (isChannel) {
-                // ── Channel: send as audio document (mp4/aac works best) ──────
-                const audioBuffer = m4aReady && fs.existsSync(tempM4a)
-                    ? fs.readFileSync(tempM4a)
-                    : fs.readFileSync(tempMp3);
-
-                const mimetype = m4aReady ? "audio/mp4" : "audio/mpeg";
-
+                // ✅ Channel ekata newsletterSendMessage use karanna ONLY
+                await conn.newsletterSendMessage(targetJid, {
+                    audio: audioBuffer,
+                    mimetype: mimetype,
+                    ptt: false,
+                });
+            } else {
+                // Groups / DM
                 await conn.sendMessage(targetJid, {
                     audio: audioBuffer,
                     mimetype: mimetype,
                     ptt: false,
-                    fileName: `${result.title}.${m4aReady ? 'm4a' : 'mp3'}`,
                 });
-
-            } else {
-                // ── Group / DM: send as voice or audio ───────────────────────
-                if (m4aReady && fs.existsSync(tempM4a)) {
-                    await conn.sendMessage(targetJid, {
-                        audio: fs.readFileSync(tempM4a),
-                        mimetype: "audio/mp4",
-                        ptt: false,
-                        fileName: `${result.title}.m4a`,
-                    });
-                } else {
-                    await conn.sendMessage(targetJid, {
-                        audio: fs.readFileSync(tempMp3),
-                        mimetype: "audio/mpeg",
-                        ptt: false,
-                        fileName: `${result.title}.mp3`,
-                    });
-                }
             }
 
             await reply(`✅ *${result.title}* ꜱᴜᴄᴄᴇꜱꜱꜰᴜʟʟʏ ꜱᴇɴᴅ ᴛᴏ *${channelname}* 🌝💗`);
@@ -177,12 +169,13 @@ cmd({
             await reply(`*ᴀᴜᴅɪᴏ ꜱᴇɴᴅɪɴɢ ᴇʀʀᴏʀ ❌*\n\n\`\`\`${err.message || err}\`\`\``);
         }
 
-        // ─── Cleanup ─────────────────────────────────────────────────────────────
+        // ── Cleanup ──────────────────────────────────────────────────────────────
         if (fs.existsSync(tempMp3)) fs.unlinkSync(tempMp3);
-        if (fs.existsSync(tempM4a)) fs.unlinkSync(tempM4a);
+        if (fs.existsSync(tempOpus)) fs.unlinkSync(tempOpus);
 
     } catch (e) {
         console.error("CSong Fatal Error:", e);
         await reply(`*ᴇʀʀᴏʀ ᴛʀʏ ᴀɢᴀɪɴ ❌*\n\n\`\`\`${e.message}\`\`\``);
     }
 })
+
