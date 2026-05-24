@@ -97,15 +97,26 @@ async (conn, mek, m, { from, args, reply, isOwner }) => {
             // console.error("Newsletter metadata error:", err);
         }
 
-        const caption = `*${result.title}*
+        const caption = `_The song was uploaded by the owner:Gavishka Manidu  ☘️💕_
 
-*📅 Rᴇʟᴇᴀꜱᴇ Dᴀᴛᴇ :* ${data.ago}
-*⏱️ Dᴜʀᴀᴛɪᴏɴ :* ${data.timestamp}
-*🎭 Vɪᴇᴡꜱ :* ${data.views}
+*📃 Title: “ ${result.title} ”*
+	
+❒ *🎭 Vɪᴇᴡꜱ :* ${data.views}
+❒ *⏱️ Dᴜʀᴀᴛɪᴏɴ :* ${data.timestamp}
+❒ *📅 Rᴇʟᴇᴀꜱᴇ Dᴀᴛᴇ :*${data.ago} 
 
-*.ılılılllıılılıllllıılılllıllıılılllıllıılıll.*
+‎*00.00 ─〇─────  {data.timestamp} ⏳*
 
-> *${channelname}*`;
+ ‎```🍃🌈volυмe : ▁▂▃▄▅▆▇▉```
+      ‎    ‎ `⇄   ◃◃   ⅠⅠ   ▹▹   ↻`
+‎
+*⊷ ‎හිතෙ තියෙන සස්සන රිඇක්‍ට් එක ඕනී ලමයෝ 🥺💖🫶*
+‎
+> _ᴍᴀɪɴᴅ ʀᴇʟᴀx ꜱᴏɴɢ 💆‍♂️🎶_
+‎
+‎ ```Use headphones for best experience 🎧```
+
+> *{channelname}*`;
 
 
         try {
