@@ -23,23 +23,28 @@ async (conn, mek, m, { from, q, sender, reply }) => {
         
         await conn.sendMessage(from, { react: { text: "🔄", key: mek.key } });
         
-        // 1. Fetch search results
-        const searchUrl = `${BASE_URL}/search?q=${encodeURIComponent(q)}&apikey=${API_KEY}`;
-        const response = await axios.get(searchUrl);
+        // 1. Fetch search results (FIX: Send API key in headers)
+        const searchUrl = `${BASE_URL}/search?q=${encodeURIComponent(q)}`;
+        const response = await axios.get(searchUrl, {
+            headers: {
+                'x-api-key': API_KEY
+            }
+        });
         const data = response.data;
-        const results = data.data || data.result || (Array.isArray(data) ? data : []);
         
-        if (!results || results.length === 0) {
+        if (!data || !data.status || !data.data || data.data.length === 0) {
             await conn.sendMessage(from, { react: { text: "❌", key: mek.key } });
             return reply('❌ *Movie not found on Cinesubz! Please check the name and try again.*');
         }
         
+        const results = data.data;
         const movies = results.slice(0, 10); 
         let listText = '*🍿 CINESUBZ SEARCH RESULTS*\n━━━━━━━━━━━━━━━━━━━\n\n';
 
         movies.forEach((movie, index) => {
             listText += `*[ ${index + 1} ]* ${movie.title}\n`;
             if(movie.year) listText += `↳ Year: ${movie.year}\n`;
+            if(movie.quality) listText += `↳ Quality: ${movie.quality}\n`;
             listText += '\n';
         });
         
@@ -56,9 +61,9 @@ async (conn, mek, m, { from, q, sender, reply }) => {
         await conn.sendMessage(from, { react: { text: "✅", key: mek.key } });
         
     } catch (e) {
-        console.log(e);
+        console.error(e);
         await conn.sendMessage(from, { react: { text: "❌", key: mek.key } });
-        reply(`❌ Error: ${e.message}`);
+        reply(`❌ Error: ${e.response ? e.response.status + " " + e.response.statusText : e.message}`);
     }
 });
 
@@ -78,28 +83,34 @@ cmd({ on: "body" }, async (conn, mek, m, { from, body, sender, reply }) => {
             const selectedMovie = session.results[num - 1];
             await conn.sendMessage(from, { react: { text: "🔄", key: mek.key } });
             
-            const urlQuery = encodeURIComponent(selectedMovie.url || selectedMovie.link);
+            const urlQuery = encodeURIComponent(selectedMovie.link || selectedMovie.url);
             
-            // Fetch info and downloads parallel
-            const [infoRes, dlRes] = await Promise.all([
-                axios.get(`${BASE_URL}/info?q=${urlQuery}&apikey=${API_KEY}`).catch(() => ({ data: {} })),
-                axios.get(`${BASE_URL}/dl?q=${urlQuery}&apikey=${API_KEY}`).catch(() => ({ data: {} }))
-            ]);
+            // FIX: Download Links are already provided in the info endpoint.
+            const infoRes = await axios.get(`${BASE_URL}/info?q=${urlQuery}`, {
+                headers: {
+                    'x-api-key': API_KEY
+                }
+            });
+            const infoDataWrapper = infoRes.data;
 
-            const infoData = infoRes.data.data || infoRes.data.result || infoRes.data || {};
-            const dlData = dlRes.data.data || dlRes.data.result || dlRes.data || {};
+            if (!infoDataWrapper.status || !infoDataWrapper.data) {
+                return reply('❌ *Failed to fetch movie details.*');
+            }
+
+            const infoData = infoDataWrapper.data;
             
             let detailsText = '*🍿 CINESUBZ MOVIE DETAILS*\n━━━━━━━━━━━━━━━━━━━\n';
             detailsText += `│ • \`TITLE\` : ${infoData.title || selectedMovie.title}\n`;
-            if(infoData.director) detailsText += `│ • \`DIRECTOR\` : ${infoData.director}\n`;
+            if(infoData.year) detailsText += `│ • \`YEAR\` : ${infoData.year}\n`;
+            if(infoData.imdb_rating) detailsText += `│ • \`IMDb\` : ⭐ ${infoData.imdb_rating}\n`;
             detailsText += '━━━━━━━━━━━━━━━━━━━\n\n';
 
-            const downloads = dlData.downloads || dlData.links || (Array.isArray(dlData) ? dlData : []);
+            const downloads = infoData.download_links || [];
             
             if (Array.isArray(downloads) && downloads.length > 0) {
                 detailsText += '*⬇️ DOWNLOAD OPTIONS*\n\n';
                 downloads.forEach((dl, idx) => {
-                    detailsText += `*[ ${idx + 1} ]* ${dl.quality || dl.name || 'Quality'} - ${dl.size || 'Unknown Size'}\n`;
+                    detailsText += `*[ ${idx + 1} ]* ${dl.quality} - ${dl.size || 'Unknown Size'}\n`;
                 });
                 detailsText += '\n━━━━━━━━━━━━━━━━━━━\n> \`Reply to this msg with the download number.\`';
             } else {
@@ -107,7 +118,9 @@ cmd({ on: "body" }, async (conn, mek, m, { from, body, sender, reply }) => {
             }
 
             let msgOptions = { caption: detailsText };
-            if (infoData.image || selectedMovie.image) msgOptions.image = { url: infoData.image || selectedMovie.image };
+            if (infoData.poster || selectedMovie.image) {
+                msgOptions.image = { url: infoData.poster || selectedMovie.image };
+            }
 
             const newMsg = await conn.sendMessage(from, msgOptions, { quoted: mek });
             
@@ -133,14 +146,14 @@ cmd({ on: "body" }, async (conn, mek, m, { from, body, sender, reply }) => {
             if (isNaN(num) || num < 1 || num > session.downloads.length) return reply('❌ *Invalid selection. Reply with a valid number.*');
             
             const selectedDl = session.downloads[num - 1];
-            const downloadLink = selectedDl.url || selectedDl.link;
+            // Extract final direct link from object
+            const downloadLink = selectedDl.final_link || selectedDl.original_zt_link || selectedDl.url || selectedDl.link;
             
             await conn.sendMessage(from, { react: { text: "⬇️", key: mek.key } });
-            reply(`*Downloading: ${session.title} - ${selectedDl.quality || 'Quality'}*\n_Please wait, file is downloading..._\n\n> 🚀 \`\`\`Using Memory Stream. Heroku Safe!\`\`\``);
+            reply(`*Downloading: ${session.title} - ${selectedDl.quality}*\n_Please wait, file is downloading..._\n\n> 🚀 \`\`\`Using Memory Stream. Heroku Safe!\`\`\``);
             
             try {
                 // HERO-STREAMING: Avoid 512MB RAM Crash
-                // Important for downloading huge movies smoothly
                 const streamResponse = await axios({
                     method: 'GET',
                     url: downloadLink,
@@ -150,8 +163,8 @@ cmd({ on: "body" }, async (conn, mek, m, { from, body, sender, reply }) => {
                 await conn.sendMessage(from, { 
                     document: { stream: streamResponse.data }, 
                     mimetype: "video/mp4",
-                    fileName: `${session.title} - ${selectedDl.quality || 'Cinesubz'}.mp4`,
-                    caption: `🎬 *${session.title}*\n✨ Quality: ${selectedDl.quality || 'Unknown'}\n\n> \`\`\`Downloaded via Cinesubz Plugin\`\`\``
+                    fileName: `${session.title} - ${selectedDl.quality}.mp4`,
+                    caption: `🎬 *${session.title}*\n✨ Quality: ${selectedDl.quality}\n\n> \`\`\`Downloaded via Cinesubz Plugin\`\`\``
                 }, { quoted: mek });
                 
                 await conn.sendMessage(from, { react: { text: "✅", key: mek.key } });
