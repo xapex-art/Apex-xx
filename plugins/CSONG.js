@@ -139,7 +139,9 @@ async (conn, mek, m, { from, args, reply, isOwner }) => {
                 channelname = metadata.name;
             }
 
-        } catch (err) {}
+        } catch (err) {
+            // console.error("Newsletter metadata error:", err);
+        }
 
         const caption = `\`\`\`The song was uploaded by the owner:Gavishka Manidu 😘🇱🇰\`\`\`
 
@@ -184,7 +186,7 @@ async (conn, mek, m, { from, args, reply, isOwner }) => {
 
             console.log(`📤 Sending Audio to: ${targetJid}`);
 
-            // ONLY THIS PART CHANGED
+            // FIXED AUDIO PART
 
             await conn.sendMessage(targetJid, {
                 audio: fs.readFileSync(tempMp3),
@@ -194,7 +196,7 @@ async (conn, mek, m, { from, args, reply, isOwner }) => {
             });
 
             await reply(
-                `✅ *${result.title}* ꜱᴜᴄᴄᴇꜱꜱꜰᴜʟʟʏ ꜱᴇɴᴅ ᴛᴏ *${channelname}* 🌝💗`
+                `✅ *${result.title}* ꜱᴜᴄᴄᴇꜱꜰᴜʟʟʏ ꜱᴇɴᴅ ᴛᴏ *${channelname}* 🌝💗`
             );
 
         } catch (err) {
