@@ -2,46 +2,102 @@ const { cmd } = require('../command');
 
 cmd({
     pattern: "cjid",
-    desc: "Get the JID of a WhatsApp channel from its invite link.",
+    desc: "Get WhatsApp Channel JID.",
     category: "utility",
-    react: "🔍",
+    react: "📢",
     filename: __filename
 },
-async (conn, mek, m, { from, args, reply }) => {
+async (conn, mek, m, { args, reply }) => {
+
     try {
+
         const link = args[0];
 
-        // ලින්ක් එකක් දීලා තියෙනවද සහ ඒක නිවැරදි channel link එකක්ද කියලා බලනවා
-        if (!link || !link.includes('whatsapp.com/channel/')) {
-            return reply("❌ *Please provide a valid WhatsApp channel link.*\n\n*Usage:* `.cjid https://whatsapp.com/channel/ABCD...`");
+        // =========================
+        // CHECK LINK
+        // =========================
+        if (!link || !link.includes("whatsapp.com/channel/")) {
+
+            return reply(
+`╭━━〔 *CHANNEL JID* 〕━━⬣
+┃ ❌ Please provide a valid
+┃ WhatsApp channel link.
+┃
+┃ 📌 *Example:*
+┃ .cjid https://whatsapp.com/channel/xxxxx
+╰━━━━━━━━━━━━━━⬣`
+            );
         }
 
-        // ලින්ක් එකෙන් invite code එක වෙන් කරගන්නවා
-        const inviteCode = link.split('whatsapp.com/channel/')[1].split('/')[0].split('?')[0];
+        // =========================
+        // EXTRACT INVITE CODE
+        // =========================
+        const inviteCode = link
+            .split("whatsapp.com/channel/")[1]
+            .split("/")[0]
+            .split("?")[0];
 
         if (!inviteCode) {
-            return reply("❌ *Could not extract invite code from the given link.*");
+
+            return reply(
+`╭━━〔 *CHANNEL JID* 〕━━⬣
+┃ ❌ Invalid channel link.
+╰━━━━━━━━━━━━━━⬣`
+            );
         }
 
-        reply("⏳ *Extracting Channel JID, please wait...*");
-        
-        try {
-            // Channel එකේ details ගන්නවා (Baileys method)
-            const metadata = await conn.newsletterMetadata("invite", inviteCode);
-            
-            if (metadata && metadata.id) {
-                const chName = metadata.name ? `*Channel Name:* ${metadata.name}\n` : "";
-                return reply(`✅ *Channel JID Found!*\n\n${chName}*JID:* \`\`\`${metadata.id}\`\`\``);
-            } else {
-                return reply("❌ *Could not find JID. The link might be invalid or the channel is private.*");
+        // =========================
+        // REACT
+        // =========================
+        await conn.sendMessage(
+            mek.key.remoteJid,
+            {
+                react: {
+                    text: "🔍",
+                    key: mek.key
+                }
             }
-        } catch (err) {
-            console.error("Error fetching newsletter metadata:", err);
-            return reply("❌ *Failed to fetch channel JID.* \n_(Make sure the bot supports WhatsApp newsletters)_");
+        );
+
+        // =========================
+        // FETCH CHANNEL DATA
+        // =========================
+        const metadata = await conn.newsletterMetadata(
+            "invite",
+            inviteCode
+        );
+
+        if (!metadata || !metadata.id) {
+
+            return reply(
+`╭━━〔 *CHANNEL JID* 〕━━⬣
+┃ ❌ Unable to fetch
+┃ channel JID.
+╰━━━━━━━━━━━━━━⬣`
+            );
         }
+
+        // =========================
+        // SUCCESS MESSAGE
+        // =========================
+        return reply(
+`╭━━〔 *CHANNEL JID* 〕━━⬣
+┃ 📢 *Name:* ${metadata.name || "Unknown"}
+┃ 🆔 *JID:* 
+┃ \`\`\`${metadata.id}\`\`\`
+╰━━━━━━━━━━━━━━⬣`
+        );
 
     } catch (e) {
-        console.error('cjid error:', e);
-        reply("❌ *System Error:* " + e.message);
+
+        console.log("cjid error =>", e);
+
+        return reply(
+`╭━━〔 *CHANNEL JID* 〕━━⬣
+┃ ❌ Error Found
+┃
+┃ ${e.message}
+╰━━━━━━━━━━━━━━⬣`
+        );
     }
 });
