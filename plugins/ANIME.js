@@ -10,7 +10,7 @@ let animeSession = {};
 
 cmd({
     pattern: "anime",
-    desc: "Anime Downloader",
+    desc: "Anime Movie & Series Downloader",
     category: "anime",
     react: "🎌",
     filename: __filename
@@ -29,7 +29,7 @@ async (conn, mek, m, {
         if (!query) {
             return reply(
 `╭━━〔 *ANIME SEARCH* 〕━━⬣
-┃ ❌ Give anime name
+┃ ❌ Please give anime name
 ┃
 ┃ 📌 Example:
 ┃ .anime naruto
@@ -38,7 +38,7 @@ async (conn, mek, m, {
         }
 
         // =========================
-        // SEARCH REACT
+        // REACT
         // =========================
         await conn.sendMessage(from, {
             react: {
@@ -90,7 +90,7 @@ async (conn, mek, m, {
 `╭━━〔 *ANIME SEARCH LIST* 〕━━⬣
 `;
 
-        results.slice(0, 10).forEach((v, i) => {
+        results.slice(0, 15).forEach((v, i) => {
 
             txt += `┃ ${i + 1}. ${v.title || v.name}\n`;
 
@@ -177,7 +177,7 @@ async (conn, mek, m, {
             }
 
             // =========================
-            // SERIES
+            // TV SERIES
             // =========================
             if (info.episodes && info.episodes.length > 0) {
 
@@ -199,11 +199,13 @@ async (conn, mek, m, {
                     .slice(0, 50)
                     .forEach((ep, i) => {
 
-                    epText += `${i + 1}. ${ep.title || `Episode ${i + 1}`}\n`;
+                    epText += `┃ ${i + 1}. ${ep.title || `Episode ${i + 1}`}\n`;
 
                 });
 
-                epText += `\n📌 Reply with episode number`;
+                epText += `╰━━━━━━━━━━━━━━⬣
+
+📌 Reply with episode number`;
 
                 return reply(epText);
 
@@ -235,11 +237,13 @@ async (conn, mek, m, {
 
                 Object.keys(downloads).forEach((q, i) => {
 
-                    qText += `${i + 1}. ${q}\n`;
+                    qText += `┃ ${i + 1}. ${q}\n`;
 
                 });
 
-                qText += `\n📌 Reply with quality number`;
+                qText += `╰━━━━━━━━━━━━━━⬣
+
+📌 Reply with quality number`;
 
                 return reply(qText);
 
@@ -266,13 +270,13 @@ async (conn, mek, m, {
             });
 
             // =========================
-            // EP DETAILS
+            // EPISODE DETAILS
             // =========================
             const details = await axios.get(
 `${API}/api/details?url=${encodeURIComponent(ep.url)}`
             );
 
-            console.log("EP DETAILS:", details.data);
+            console.log("EPISODE DETAILS:", details.data);
 
             let info = {};
 
@@ -294,26 +298,38 @@ async (conn, mek, m, {
                 return reply("❌ No download links found");
             }
 
+            // =========================
+            // SAVE QUALITY SESSION
+            // =========================
             animeSession[sender] = {
                 step: "quality",
-                title: session.title,
+                title: info.title || session.title,
                 downloads: downloads
             };
 
-            let qText =
-`╭━━〔 *SELECT QUALITY* 〕━━⬣
+            // =========================
+            // EPISODE DETAILS MESSAGE
+            // =========================
+            let detailText =
+`╭━━〔 *EPISODE DETAILS* 〕━━⬣
+┃ 🎬 Title : ${info.title || "Anime"}
+┃ 📺 Type : Episode
+╰━━━━━━━━━━━━━━⬣
 
+╭━━〔 *DOWNLOAD OPTIONS* 〕━━⬣
 `;
 
             Object.keys(downloads).forEach((q, i) => {
 
-                qText += `${i + 1}. ${q}\n`;
+                detailText += `┃ ${i + 1}. ${q}\n`;
 
             });
 
-            qText += `\n📌 Reply with quality number`;
+            detailText += `╰━━━━━━━━━━━━━━⬣
 
-            return reply(qText);
+📌 Reply with quality number`;
+
+            return reply(detailText);
 
         }
 
@@ -366,7 +382,7 @@ async (conn, mek, m, {
                 caption:
 `╭━━〔 *ANIME DOWNLOAD* 〕━━⬣
 ┃ 🎬 ${session.title}
-┃ 📥 ${quality}
+┃ 📥 Quality : ${quality}
 ╰━━━━━━━━━━━━━━⬣`
             }, {
                 quoted: mek
