@@ -101,7 +101,7 @@ async (conn, mek, m, { from, args, reply, isOwner }) => {
 ‎
 ‎❒ *🎭 Vɪᴇᴡꜱ :* ${data.views}
 ‎❒ *⏱️ Dᴜʀᴀᴛɪᴏɴ :* ${data.timestamp}
-‎❒ *📅 Rᴇʟᴇᴀꜱᴇ Dᴀᴛᴇ : *${data.ago} 
+‎❒ *📅 Rᴇʟᴇᴀꜱᴇ Dᴀᴛᴇ :* ${data.ago} 
 ‎
 ‎*00.00 ─〇───── ${data.timestamp} ⏳* 
 
