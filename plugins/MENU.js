@@ -33,7 +33,7 @@ async (conn, mek, m, { from, pushname, reply }) => {
 > \`\`\`Developed by ChiraNx 🌸\`\`\``;
 
         // Image URL provided
-        const imageUrl = "https://www.image2url.com/r2/default/images/1776791779484-e3237c59-d668-4a9d-ba98-95f2ff7ccc71.png";
+        const imageUrl = "https://files.catbox.moe/78oacy.jpeg";
 
         // Sending the menu image with the custom caption
         await conn.sendMessage(from, { 
