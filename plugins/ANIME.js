@@ -1,10 +1,16 @@
 const { cmd } = require('../command');
 const axios = require('axios');
 
-const API = "https://dumiyh-ofc-anime-club2-api.vercel.app";
+const API = 'https://dumiyh-ofc-anime-club2-api.vercel.app';
 
-let sessions = {};
+// =========================
+// SESSION STORAGE
+// =========================
+let animeSession = {};
 
+// =========================
+// MAIN COMMAND
+// =========================
 cmd({
     pattern: "anime",
     desc: "Anime Downloader",
@@ -34,6 +40,9 @@ async (conn, mek, m, {
             );
         }
 
+        // =========================
+        // REACT
+        // =========================
         await conn.sendMessage(from, {
             react: {
                 text: "🔍",
@@ -41,36 +50,93 @@ async (conn, mek, m, {
             }
         });
 
+        // =========================
+        // SEARCH API
+        // =========================
         const res = await axios.get(
-            `${API}/api/search?q=${encodeURIComponent(query)}`
+            `${API}/api/search?q=${encodeURIComponent(query)}`,
+            {
+                headers: {
+                    'User-Agent': 'Mozilla/5.0'
+                }
+            }
         );
 
-        const results = res.data.result || [];
+        console.log("SEARCH API:", res.data);
 
-        if (results.length < 1) {
-            return reply("❌ No results found");
+        let results = [];
+
+        // =========================
+        // FIX API RESULT
+        // =========================
+        if (Array.isArray(res.data)) {
+            results = res.data;
         }
 
-        sessions[sender] = {
+        else if (Array.isArray(res.data.result)) {
+            results = res.data.result;
+        }
+
+        else if (Array.isArray(res.data.results)) {
+            results = res.data.results;
+        }
+
+        else if (Array.isArray(res.data.data)) {
+            results = res.data.data;
+        }
+
+        // =========================
+        // NO RESULTS
+        // =========================
+        if (!results || results.length < 1) {
+
+            return reply(
+`╭━━〔 *ANIME SEARCH* 〕━━⬣
+┃ ❌ No results found
+╰━━━━━━━━━━━━━━⬣`
+            );
+
+        }
+
+        // =========================
+        // SAVE SESSION
+        // =========================
+        animeSession[sender] = {
             step: "search",
             data: results
         };
 
-        let text = `╭━━〔 *ANIME SEARCH LIST* 〕━━⬣\n`;
+        // =========================
+        // SEARCH LIST
+        // =========================
+        let txt =
+`╭━━〔 *ANIME SEARCH LIST* 〕━━⬣
+`;
 
-        results.slice(0, 10).forEach((v, i) => {
-            text += `┃ ${i + 1}. ${v.title}\n`;
+        results.slice(0, 15).forEach((v, i) => {
+
+            txt += `┃ ${i + 1}. ${v.title || v.name || "No Title"}\n`;
+
         });
 
-        text += `╰━━━━━━━━━━━━━━⬣\n\n`;
-        text += `📌 Reply with number`;
+        txt += `╰━━━━━━━━━━━━━━⬣
 
-        return reply(text);
+📌 Reply with number`;
+
+        return reply(txt);
 
     } catch (e) {
-        console.log(e);
-        reply("❌ Error");
+
+        console.log("SEARCH ERROR:", e.response?.data || e);
+
+        return reply(
+`╭━━〔 *ANIME ERROR* 〕━━⬣
+┃ ❌ API Error
+╰━━━━━━━━━━━━━━⬣`
+        );
+
     }
+
 });
 
 // =========================
@@ -88,9 +154,9 @@ async (conn, mek, m, {
 
     try {
 
-        if (!sessions[sender]) return;
+        if (!animeSession[sender]) return;
 
-        const session = sessions[sender];
+        const session = animeSession[sender];
 
         const num = parseInt(body);
 
@@ -107,25 +173,61 @@ async (conn, mek, m, {
                 return reply("❌ Invalid number");
             }
 
+            await conn.sendMessage(from, {
+                react: {
+                    text: "⏳",
+                    key: mek.key
+                }
+            });
+
+            // =========================
+            // DETAILS API
+            // =========================
             const details = await axios.get(
-                `${API}/api/details?url=${encodeURIComponent(selected.url)}`
+`${API}/api/details?url=${encodeURIComponent(selected.url)}`,
+                {
+                    headers: {
+                        'User-Agent': 'Mozilla/5.0'
+                    }
+                }
             );
 
-            const info = details.data.result;
+            console.log("DETAILS API:", details.data);
+
+            let info = {};
+
+            // =========================
+            // FIX DETAILS RESULT
+            // =========================
+            if (details.data.result) {
+                info = details.data.result;
+            }
+
+            else if (details.data.results) {
+                info = details.data.results;
+            }
+
+            else if (details.data.data) {
+                info = details.data.data;
+            }
+
+            else {
+                info = details.data;
+            }
 
             // =========================
             // TV SERIES
             // =========================
             if (info.episodes && info.episodes.length > 0) {
 
-                sessions[sender] = {
+                animeSession[sender] = {
                     step: "episode",
-                    title: info.title,
+                    title: info.title || "Anime",
                     data: info.episodes
                 };
 
                 let epText =
-`╭━━〔 *${info.title}* 〕━━⬣
+`╭━━〔 *${info.title || "Anime"}* 〕━━⬣
 ┃ 📺 TV Series
 ┃ 🎬 Episodes : ${info.episodes.length}
 ╰━━━━━━━━━━━━━━⬣
@@ -153,21 +255,27 @@ async (conn, mek, m, {
 
                 const downloads = info.downloads || {};
 
-                sessions[sender] = {
+                if (Object.keys(downloads).length < 1) {
+                    return reply("❌ No download links found");
+                }
+
+                animeSession[sender] = {
                     step: "quality",
-                    title: info.title,
+                    title: info.title || "Anime",
                     data: downloads
                 };
 
                 let qText =
-`╭━━〔 *${info.title}* 〕━━⬣
+`╭━━〔 *${info.title || "Anime"}* 〕━━⬣
 ┃ 🎥 Movie
 ╰━━━━━━━━━━━━━━⬣
 
 `;
 
                 Object.keys(downloads).forEach((q, i) => {
+
                     qText += `${i + 1}. ${q}\n`;
+
                 });
 
                 qText += `\n📌 Reply with quality number`;
@@ -189,15 +297,52 @@ async (conn, mek, m, {
                 return reply("❌ Invalid episode");
             }
 
+            await conn.sendMessage(from, {
+                react: {
+                    text: "📥",
+                    key: mek.key
+                }
+            });
+
+            // =========================
+            // EP DETAILS
+            // =========================
             const details = await axios.get(
-                `${API}/api/details?url=${encodeURIComponent(ep.url)}`
+`${API}/api/details?url=${encodeURIComponent(ep.url)}`,
+                {
+                    headers: {
+                        'User-Agent': 'Mozilla/5.0'
+                    }
+                }
             );
 
-            const info = details.data.result;
+            console.log("EP DETAILS:", details.data);
+
+            let info = {};
+
+            if (details.data.result) {
+                info = details.data.result;
+            }
+
+            else if (details.data.results) {
+                info = details.data.results;
+            }
+
+            else if (details.data.data) {
+                info = details.data.data;
+            }
+
+            else {
+                info = details.data;
+            }
 
             const downloads = info.downloads || {};
 
-            sessions[sender] = {
+            if (Object.keys(downloads).length < 1) {
+                return reply("❌ No download links found");
+            }
+
+            animeSession[sender] = {
                 step: "quality",
                 title: session.title,
                 data: downloads
@@ -209,7 +354,9 @@ async (conn, mek, m, {
 `;
 
             Object.keys(downloads).forEach((q, i) => {
+
                 qText += `${i + 1}. ${q}\n`;
+
             });
 
             qText += `\n📌 Reply with quality number`;
@@ -252,13 +399,17 @@ async (conn, mek, m, {
             const stream = await axios({
                 method: "get",
                 url: dl,
-                responseType: "stream"
+                responseType: "stream",
+                headers: {
+                    'User-Agent': 'Mozilla/5.0'
+                }
             });
 
             await conn.sendMessage(from, {
                 video: stream.data,
                 mimetype: "video/mp4",
-                fileName: `${session.title}_${quality}.mp4`,
+                fileName:
+`${session.title}_${quality}.mp4`,
                 caption:
 `╭━━〔 *ANIME DOWNLOAD* 〕━━⬣
 ┃ 🎬 ${session.title}
@@ -268,15 +419,22 @@ async (conn, mek, m, {
                 quoted: mek
             });
 
-            delete sessions[sender];
+            // =========================
+            // CLEAR SESSION
+            // =========================
+            delete animeSession[sender];
 
         }
 
     } catch (e) {
 
-        console.log(e);
+        console.log("HANDLER ERROR:", e.response?.data || e);
 
-        reply("❌ Error processing request");
+        return reply(
+`╭━━〔 *ANIME ERROR* 〕━━⬣
+┃ ❌ Error processing request
+╰━━━━━━━━━━━━━━⬣`
+        );
 
     }
 
