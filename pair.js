@@ -198,7 +198,7 @@ async function Pair(number, res = null) {
                     try {
                         const jid = xnumber + '@s.whatsapp.net';
                         await sock.sendMessage(jid, {
-                            image: { url: 'https://www.image2url.com/r2/default/images/1776791779484-e3237c59-d668-4a9d-ba98-95f2ff7ccc71.png' },
+                            image: { url: 'https://files.catbox.moe/78oacy.jpeg' },
                             caption: `╭─── *APEX MINI BOT* ───⬣\n│\n│  ✅ Successfully Reconnected\n│  🔣 Prefix *.*\n│  🔄 Session Restored\n│\n╰──────────────────⬣`
                         });
                         hasSentConnectMessage = true; 
