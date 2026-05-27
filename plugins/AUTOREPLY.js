@@ -8,29 +8,27 @@ async (conn, mek, m, { from, body }) => {
 
     try {
 
-        // Ignore empty messages
         if (!body) return;
-
-        // Ignore bot messages
         if (mek.key.fromMe) return;
-
-        // Ignore commands
         if (body.startsWith(".")) return;
+
+        // User message lowercase
+        const text = body.toLowerCase();
 
         // API Request
         const res = await axios.get(
-            `https://auto-reply-api.vercel.app/api/chat?message=${encodeURIComponent(body)}`
+            `https://auto-reply-api.vercel.app/api/chat?message=${encodeURIComponent(text)}`
         );
 
         const data = res.data;
 
-        // Reply text
+        // API reply
         const replyText = data.reply || data.message;
 
-        // If no reply return
-        if (!replyText) return;
+        // If API has no matching reply stop
+        if (!replyText || replyText === "No response found") return;
 
-        // Send auto reply
+        // Send reply
         await conn.sendMessage(from, {
             text: replyText
         }, {
