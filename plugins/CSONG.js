@@ -45,7 +45,7 @@ async (conn, mek, m, { from, args, reply, isOwner }) => {
         const ytUrl = data.url;
         console.log("🎬 YouTube:", ytUrl);
 
-        const api = `https://podda-api.zone.id/ytmp3?url=${encodeURIComponent(ytUrl)}`;
+        const api = `https://www.movanest.xyz/v2/ytmp3?url=${encodeURIComponent(ytUrl)}`;
         const { data: apiRes } = await axios.get(api);
 
         if (!apiRes?.status || !apiRes?.result?.downloadUrl) {
@@ -105,7 +105,7 @@ async (conn, mek, m, { from, args, reply, isOwner }) => {
 
      ㅤ   *0:00 ─〇───── ${data.timestamp} ❄️*
 
-*නිහතමානී රියැක්ට් එකක් ඕනී ❤️😘🍃*
+*නිහතමානී රිඇක්‍ට් එකක් ඕනී ❤️😘🍃*
 
 *───── ❝ ᴍᴀɪɴᴅ ʀᴇʟᴀx ꜱᴏɴɢ 🍃🙇‍♂️❞ ─────*
 
@@ -116,4 +116,43 @@ async (conn, mek, m, { from, args, reply, isOwner }) => {
             console.log(`📤 Sending image & caption to: ${targetJid}`);
             await conn.sendMessage(targetJid, {
                 image: { url: data.thumbnail },
+                caption: caption,
+            });
+        } catch (err) {
+            console.error("❌ Thumbnail Send Error:", err);
+            await reply(`*ɪᴍᴀɢᴇ ꜱᴇɴᴅɪɴɢ ᴇʀʀᴏʀ ❌* \n\n\`\`\`${err.message || err}\`\`\``);
+        }
+
+
+        try {
+            console.log(`📤 Sending Audio to: ${targetJid}`);
+            if (opusReady && fs.existsSync(tempOpus)) {
+                const opusBuffer = fs.readFileSync(tempOpus);
+                await conn.sendMessage(targetJid, {
+                    audio: opusBuffer,
+                    mimetype: "audio/ogg; codecs=opus",
+                    ptt: true, 
+                });
+            } else {
+                await conn.sendMessage(targetJid, {
+                    audio: fs.readFileSync(tempMp3),
+                    mimetype: "audio/mpeg",
+                    ptt: false,
+                });
+            }
+            await reply(`✅ *${result.title}* ꜱᴜᴄᴄᴇꜱꜱꜰᴜʟʟʏ ꜱᴇɴᴅ ᴛᴏ *${channelname}* 🌝💗`);
+        } catch (err) {
+            console.error("❌ Audio Send Error:", err);
+            await reply(`*ᴀᴜᴅɪᴏ ꜱᴇɴᴅɪɴɢ ᴇʀʀᴏʀ ❌* \n\n\`\`\`${err.message || err}\`\`\``);
+        }
+
+
+        if (fs.existsSync(tempMp3)) fs.unlinkSync(tempMp3);
+        if (fs.existsSync(tempOpus)) fs.unlinkSync(tempOpus);
+
+    } catch (e) {
+        console.error("CSong Fatal Error:", e);
+        await reply(`*ᴇʀʀᴏʀ ᴛʀʏ ᴀɢᴀɪɴ ❌*\n\n\`\`\`${e.message}\`\`\``);
+    }
+})
 
