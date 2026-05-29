@@ -82,7 +82,7 @@ async (conn, mek, m, { from, args, reply, isOwner }) => {
 
 
 
-        const api = `https://www.movanest.xyz/v2/ytmp3?url=${encodeURIComponent(ytUrl)}`;
+        const api = `https://www.movanest.xyz/v2/ytdl2?input=${encodeURIComponent(ytUrl)}format=audio&bitrate=128`;
 
         const { data: apiRes } = await axios.get(api);
 
