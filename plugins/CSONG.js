@@ -22,10 +22,6 @@ cmd({
 async (conn, mek, m, { from, args, reply, isOwner }) => {
     try {
 
-        if (!isOwner) {
-            return await reply("🚫 *ᴏᴡɴᴇʀ ᴏɴʟʏ ᴄᴏᴍᴍᴀɴᴅ*");
-        }
-
         const targetJid = args[0];
         const query = args.slice(1).join(" ");
 
