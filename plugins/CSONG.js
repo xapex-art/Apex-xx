@@ -110,7 +110,7 @@ async (conn, mek, m, { from, args, reply, isOwner }) => {
 
 *• නිහතමානී රිඇක්‍ට් එකක් ඕනී ❤️😘🍃*
 
-`ඔයා ආසම සින්දු අහන්න චැනල් එකෙ දිගටම ඉන්න 💗🌈❄️`
+\`ඔයා ආසම සින්දු අහන්න චැනල් එකෙ දිගටම ඉන්න 💗🌈❄️\`
 ‎
 *_Maind Relax Song Use headphones for_*
 *_best experience 🎧🙇_*`;
