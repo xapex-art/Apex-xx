@@ -98,12 +98,22 @@ async (conn, mek, m, { from, args, reply, isOwner }) => {
             // console.error("Newsletter metadata error:", err);  
         }  
 
-        const caption = `*${result.title}*
-📅 Rᴇʟᴇᴀꜱᴇ Dᴀᴛᴇ : ${data.ago}
-⏱️ Dᴜʀᴀᴛɪᴏɴ : ${data.timestamp}
-🎭 Vɪᴇᴡꜱ : ${data.views}
-.ılılılllıılılıllllıılılllıllıılılllıllıılıll.
-> ${channelname}`;
+        const caption = `> ꜱᴏɴɢ ᴜᴘʟᴏᴀᴅᴇᴅ ʙʏ ᴛʜᴇ ᴏᴡɴᴇʀ : Gavishka Manidu 🎭
+
+☘️🎶 Title: ${result.title}*
+
+❐ *🚀 Vɪᴇᴡꜱ : ${data.views}*
+❐ *⏱️ Dᴜʀᴀᴛɪᴏɴ : ${data.timestamp}*
+❐ *📅 Rᴇʟᴇᴀꜱᴇ Dᴀᴛᴇ : ${data.ago}*
+
+*0:00 ─〇───── ${data.timestamp}*
+
+*• නිහතමානී රිඇක්‍ට් එකක් ඕනී ❤️😘🍃*
+
+`ඔයා ආසම සින්දු අහන්න චැනල් එකෙ දිගටම ඉන්න 💗🌈❄️`
+‎
+*_Maind Relax Song Use headphones for_*
+*_best experience 🎧🙇_*`;
 
         try {  
             console.log(`📤 Sending image & caption to: ${targetJid}`);  
