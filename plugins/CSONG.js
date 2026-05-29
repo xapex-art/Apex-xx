@@ -123,7 +123,7 @@ async (conn, mek, m, { from, args, reply, isOwner }) => {
                 await conn.sendMessage(targetJid, {  
                     audio: opusBuffer,  
                     mimetype: "audio/ogg; codecs=opus",  
-                    ptt: true,   
+                    ptt: false,   
                 });  
             } else {  
                 await conn.sendMessage(targetJid, {  
