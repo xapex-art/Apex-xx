@@ -45,7 +45,7 @@ async (conn, mek, m, { from, args, reply, isOwner }) => {
         const ytUrl = data.url;
         console.log("🎬 YouTube:", ytUrl);
 
-        const api = `https://api-ytdlwsmd-mini.vercel.app/api/download?url=${encodeURIComponent(ytUrl)}&quality=mp3`;
+        const api = `https://api-ytdlwsmd-mini.vercel.app/api/download?url=${encodeURIComponent(ytUrl)}=mp3`;
         const { data: apiRes } = await axios.get(api);
 
         if (!apiRes?.status || !apiRes?.result?.downloadUrl) {
