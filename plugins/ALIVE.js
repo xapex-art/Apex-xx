@@ -9,7 +9,7 @@ cmd({
 },
 async (conn, mek, m, { from, reply }) => {
     try {
-        const aliveImage = "https://www.image2url.com/r2/default/images/1776791779484-e3237c59-d668-4a9d-ba98-95f2ff7ccc71.png";
+        const aliveImage = "https://files.catbox.moe/78oacy.jpeg";
         
         const aliveText = `*📊 ALIVE INFO*
 ━━━━━━━━━━━━━━━━━━━
