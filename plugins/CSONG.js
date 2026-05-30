@@ -167,11 +167,6 @@ async (conn, mek, m, { from, args, reply, isOwner }) => {
     }
 });
 
-const fs = require("fs");
-const path = require("path");
-
-const captionFile = path.join(__dirname, 'csong_caption.json');
-
 cmd({
     pattern: "setcsong",
     desc: "Set custom caption for csong",
@@ -192,6 +187,6 @@ async (conn, mek, m, { args, reply, isOwner }) => {
         console.error("Caption Save Error:", e);
         await reply("❌ *Caption එක Save කිරීමේදී දෝෂයක්!*");
     }
-});
+})
 
 
