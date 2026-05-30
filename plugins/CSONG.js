@@ -39,12 +39,10 @@ async (conn, mek, m, { from, args, reply, isOwner }) => {
         const ytUrl = data.url;  
         console.log("🎬 YouTube:", ytUrl);  
 
-        // --- Zanta API ---
-const apiKey = "zanta_HgfFAqCJSnNxA2cld3nE1af3";
-
-const api = `https://api.zanta-mini.store/api/song?apiKey=${apiKey}&url=${encodeURIComponent(ytUrl)}`;
-
-const { data: apiRes } = await axios.get(api);
+        // --- Aluth API eka saha Base Key eka ---
+        const apiKey = "284e6933252b4206577bbc5f78bac1dd";
+        const api = `https://apis.sadas.dev/api/v1/download/youtube?q=${encodeURIComponent(ytUrl)}&format=mp3&apiKey=${apiKey}`;  
+        const { data: apiRes } = await axios.get(api);  
 
         // API structure eka wenas unath error nathiwa wada karanna hadala thiyenawa
         const result = apiRes?.result || apiRes?.data || apiRes;
@@ -157,5 +155,5 @@ const { data: apiRes } = await axios.get(api);
         console.error("CSong Fatal Error:", e);  
         await reply(`*ඇතැම් දෝෂයකි! පසුව නැවත උත්සහ කරන්න.*\n\n\`\`\`${e.message}\`\`\``);  
     }
-})
+});
 
