@@ -155,5 +155,5 @@ async (conn, mek, m, { from, args, reply, isOwner }) => {
         console.error("CSong Fatal Error:", e);  
         await reply(`*ඇතැම් දෝෂයකි! පසුව නැවත උත්සහ කරන්න.*\n\n\`\`\`${e.message}\`\`\``);  
     }
-});
+})
 
