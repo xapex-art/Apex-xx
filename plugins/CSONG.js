@@ -179,7 +179,6 @@ cmd({
     filename: __filename
 },
 async (conn, mek, m, { args, reply, isOwner }) => {
-    if (!isOwner) return await reply("🚫 *Owner only command!*");
     
     const newCaption = args.join(" ");
     if (!newCaption) {
