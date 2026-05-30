@@ -99,12 +99,22 @@ async (conn, mek, m, { from, args, reply, isOwner }) => {
         }  
 
                 // --- CUSTOM CAPTION EKA GANA KOTASA ---
-        let finalCaptionText = `*${result.title}*
-📅 Rᴇʟᴇᴀꜱᴇ Dᴀᴛᴇ : ${data.ago}
-⏱️ Dᴜʀᴀᴛɪᴏɴ : ${data.timestamp}
-🎭 Vɪᴇᴡꜱ : ${data.views}
-.ılılılllıılılıllllıılılllıllıılılllıllıılıll.
-> ${channelname}`; // Meka default caption eka
+        let finalCaptionText = `> ꜱᴏɴɢ ᴜᴘʟᴏᴀᴅᴇᴅ ʙʏ ᴛʜᴇ ᴏᴡɴᴇʀ : Gavishka Manidu
+
+*☘️🎶 Title: ${result.title}*
+
+❐ *🎭 Vɪᴇᴡꜱ : ${data.views}*
+❐ *⏱️ Dᴜʀᴀᴛɪᴏɴ : ${data.timestamp}*
+❐ *📅 Rᴇʟᴇᴀꜱᴇ Dᴀᴛᴇ : ${data.ago}*
+
+*0:00 ─〇───── ${data.timestamp} ⏳*
+
+*• නිහතමානී රිඇක්‍ට් එකක් ඕනී ❤️😘🍃*
+
+\`ඔයා ආසම සින්දු අහන්න චැනල් එකෙ දිගටම ඉන්න 💖🍃😉\`
+‎
+*_Maind Relax Song Use headphones for_*
+*_best experience 🎧🙇_*`; // Meka default caption eka
 
         const captionFilePath = path.join(__dirname, 'csong_caption.json');
         
