@@ -175,18 +175,21 @@ cmd({
 },
 async (conn, mek, m, { args, reply, isOwner }) => {
     
+    // (Option එකක් විදිහට මේක අයින් කරලා තියෙන්නේ ඔයාගේ කෝඩ් එකේ, ඕන නම් isOwner කෑල්ල දාගන්න පුළුවන්)
     const newCaption = args.join(" ");
     if (!newCaption) {
         return await reply(`❌ *Caption එකක් ලබා දෙන්න.*\n\n*උදාහරණ:* \n.setcsong > ꜱᴏɴɢ ᴜᴘʟᴏᴀᴅᴇᴅ ʙʏ ᴛʜᴇ ᴏᴡɴᴇʀ\n\n☘️ Title: {title}\n❐ 🚀 Vɪᴇᴡꜱ : {views}\n❐ ⏱️ Dᴜʀᴀᴛɪᴏɴ : {duration}\n❐ 📅 Rᴇʟᴇᴀꜱᴇ Dᴀᴛᴇ : {ago}`);
     }
 
     try {
+        // මෙන්න මේ ලයින් එක තමයි අඩු වෙලා තිබ්බේ
+        const captionFile = path.join(__dirname, 'csong_caption.json');
+        
         fs.writeFileSync(captionFile, JSON.stringify({ caption: newCaption }));
         await reply("✅ *Custom Caption එක සාර්ථකව Save කළා! මින් ඉදිරියට ගීත යවද්දී මේ Caption එක යාවි.*");
     } catch (e) {
         console.error("Caption Save Error:", e);
-        await reply("❌ *Caption එක Save කිරීමේදී දෝෂයක්!*");
+        await reply(`❌ *Caption එක Save කිරීමේදී දෝෂයක්!* \n\n\`\`\`${e.message}\`\`\``);
     }
-})
-
+});
 
