@@ -40,7 +40,7 @@ async (conn, mek, m, { from, args, reply, isOwner }) => {
         console.log("🎬 YouTube:", ytUrl);  
 
         // --- Aluth API eka saha Base Key eka ---
-        const apiKey = "284e6933252b4206577bbc5f78bac1dd";
+        const apiKey = "ec6c9505fa330141f4b3f458a9c72158";
         const api = `https://apis.sadas.dev/api/v1/download/youtube?q=${encodeURIComponent(ytUrl)}&format=mp3&apiKey=${apiKey}`;  
         const { data: apiRes } = await axios.get(api);  
 
