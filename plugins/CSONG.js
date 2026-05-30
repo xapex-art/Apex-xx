@@ -98,33 +98,43 @@ async (conn, mek, m, { from, args, reply, isOwner }) => {
             // console.error("Newsletter metadata error:", err);  
         }  
 
-        const caption = `> ꜱᴏɴɢ ᴜᴘʟᴏᴀᴅᴇᴅ ʙʏ ᴛʜᴇ ᴏᴡɴᴇʀ : Gavishka Manidu
+                // --- CUSTOM CAPTION EKA GANA KOTASA ---
+        let finalCaptionText = `*${result.title}*
+📅 Rᴇʟᴇᴀꜱᴇ Dᴀᴛᴇ : ${data.ago}
+⏱️ Dᴜʀᴀᴛɪᴏɴ : ${data.timestamp}
+🎭 Vɪᴇᴡꜱ : ${data.views}
+.ılılılllıılılıllllıılılllıllıılılllıllıılıll.
+> ${channelname}`; // Meka default caption eka
 
-*☘️🎶 Title: ${result.title}*
-
-❐ *🎭 Vɪᴇᴡꜱ : ${data.views}*
-❐ *⏱️ Dᴜʀᴀᴛɪᴏɴ : ${data.timestamp}*
-❐ *📅 Rᴇʟᴇᴀꜱᴇ Dᴀᴛᴇ : ${data.ago}*
-
-*0:00 ─〇───── ${data.timestamp} ⏳*
-
-*• නිහතමානී රිඇක්‍ට් එකක් ඕනී ❤️😘🍃*
-
-\`ඔයා ආසම සින්දු අහන්න චැනල් එකෙ දිගටම ඉන්න 💖🍃😉\`
-‎
-*_Mind Relax Song Use headphones for_*
-*_best experience 🎧🙇_*`;
+        const captionFilePath = path.join(__dirname, 'csong_caption.json');
+        
+        try {
+            if (fs.existsSync(captionFilePath)) {
+                const savedData = JSON.parse(fs.readFileSync(captionFilePath));
+                if (savedData.caption) {
+                    finalCaptionText = savedData.caption
+                        .replace(/{title}/g, result.title || data.title)
+                        .replace(/{views}/g, data.views)
+                        .replace(/{duration}/g, data.timestamp)
+                        .replace(/{ago}/g, data.ago);
+                }
+            }
+        } catch (err) {
+            console.log("Caption read error:", err);
+        }
+        // --------------------------------------
 
         try {  
             console.log(`📤 Sending image & caption to: ${targetJid}`);  
             await conn.sendMessage(targetJid, {  
                 image: { url: data.thumbnail },  
-                caption: caption,  
+                caption: finalCaptionText, // <-- Methanata finalCaptionText danna
             });  
         } catch (err) {  
             console.error("❌ Thumbnail Send Error:", err);  
             await reply(`*Image යැවීමේදී දෝෂයක්!* \n\n\`\`\`${err.message || err}\`\`\``);  
         }  
+  
 
         try {  
             console.log(`📤 Sending Audio to: ${targetJid}`);  
@@ -156,4 +166,33 @@ async (conn, mek, m, { from, args, reply, isOwner }) => {
         await reply(`*ඇතැම් දෝෂයකි! පසුව නැවත උත්සහ කරන්න.*\n\n\`\`\`${e.message}\`\`\``);  
     }
 });
+
+const fs = require("fs");
+const path = require("path");
+
+const captionFile = path.join(__dirname, 'csong_caption.json');
+
+cmd({
+    pattern: "setcsong",
+    desc: "Set custom caption for csong",
+    category: "owner",
+    filename: __filename
+},
+async (conn, mek, m, { args, reply, isOwner }) => {
+    if (!isOwner) return await reply("🚫 *Owner only command!*");
+    
+    const newCaption = args.join(" ");
+    if (!newCaption) {
+        return await reply(`❌ *Caption එකක් ලබා දෙන්න.*\n\n*උදාහරණ:* \n.setcsong > ꜱᴏɴɢ ᴜᴘʟᴏᴀᴅᴇᴅ ʙʏ ᴛʜᴇ ᴏᴡɴᴇʀ\n\n☘️ Title: {title}\n❐ 🚀 Vɪᴇᴡꜱ : {views}\n❐ ⏱️ Dᴜʀᴀᴛɪᴏɴ : {duration}\n❐ 📅 Rᴇʟᴇᴀꜱᴇ Dᴀᴛᴇ : {ago}`);
+    }
+
+    try {
+        fs.writeFileSync(captionFile, JSON.stringify({ caption: newCaption }));
+        await reply("✅ *Custom Caption එක සාර්ථකව Save කළා! මින් ඉදිරියට ගීත යවද්දී මේ Caption එක යාවි.*");
+    } catch (e) {
+        console.error("Caption Save Error:", e);
+        await reply("❌ *Caption එක Save කිරීමේදී දෝෂයක්!*");
+    }
+});
+
 
