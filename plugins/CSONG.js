@@ -116,33 +116,23 @@ async (conn, mek, m, { from, args, reply, isOwner }) => {
 *_Mind Relax Song Use headphones for_*
 *_best experience 🎧🙇_*`; // Meka default caption eka
 
-        const captionFilePath = path.join(__dirname, "csong_caption.json");
-
-try {
-
-    if (fs.existsSync(captionFilePath)) {
-
-        const allCaptions = JSON.parse(
-            fs.readFileSync(captionFilePath)
-        );
-
-        const userCaption = allCaptions[m.sender];
-
-        if (userCaption?.caption) {
-
-            finalCaptionText = userCaption.caption
-                .replace(/{title}/g, result.title || data.title)
-                .replace(/{views}/g, data.views)
-                .replace(/{duration}/g, data.timestamp)
-                .replace(/{ago}/g, data.ago)
-                .replace(/{channelname}/g, channelname);
-
+        const captionFilePath = path.join(__dirname, 'csong_caption.json');
+        
+        try {
+            if (fs.existsSync(captionFilePath)) {
+                const savedData = JSON.parse(fs.readFileSync(captionFilePath));
+                if (savedData.caption) {
+                    finalCaptionText = savedData.caption
+                        .replace(/{title}/g, result.title || data.title)
+                        .replace(/{views}/g, data.views)
+                        .replace(/{duration}/g, data.timestamp)
+                        .replace(/{ago}/g, data.ago)
+                        .replace(/{channelname}/g, channelname);
+                }
+            }
+        } catch (err) {
+            console.log("Caption read error:", err);
         }
-    }
-
-} catch (err) {
-    console.log("Caption read error:", err);
-}
         // --------------------------------------
 
         try {  
@@ -194,37 +184,23 @@ cmd({
     category: "owner",
     filename: __filename
 },
-async (conn, mek, m, { args, reply, sender }) => {
-
+async (conn, mek, m, { args, reply, isOwner }) => {
+    
+    // (Option එකක් විදිහට මේක අයින් කරලා තියෙන්නේ ඔයාගේ කෝඩ් එකේ, ඕන නම් isOwner කෑල්ල දාගන්න පුළුවන්)
     const newCaption = args.join(" ");
-
     if (!newCaption) {
-        return await reply(`❌ Caption එකක් දෙන්න.`);
+        return await reply(`❌ *Caption එකක් ලබා දෙන්න.*\n\n*උදාහරණ:* \n.setcsong > ꜱᴏɴɢ ᴜᴘʟᴏᴀᴅᴇᴅ ʙʏ ᴛʜᴇ ᴏᴡɴᴇʀ\n\n☘️ Title: {title}\n❐ 🚀 Vɪᴇᴡꜱ : {views}\n❐ ⏱️ Dᴜʀᴀᴛɪᴏɴ : {duration}\n❐ 📅 Rᴇʟᴇᴀꜱᴇ Dᴀᴛᴇ : {ago}`);
     }
 
     try {
-
-        const captionFile = path.join(__dirname, "csong_caption.json");
-
-        let data = {};
-
-        if (fs.existsSync(captionFile)) {
-            data = JSON.parse(fs.readFileSync(captionFile));
-        }
-
-        data[sender] = {
-            caption: newCaption
-        };
-
-        fs.writeFileSync(
-            captionFile,
-            JSON.stringify(data, null, 2)
-        );
-
-        await reply("✅ Custom caption saved successfully.");
-
+        // මෙන්න මේ ලයින් එක තමයි අඩු වෙලා තිබ්බේ
+        const captionFile = path.join(__dirname, 'csong_caption.json');
+        
+        fs.writeFileSync(captionFile, JSON.stringify({ caption: newCaption }));
+        await reply("✅ *Custom Caption එක සාර්ථකව Save කළා! මින් ඉදිරියට ගීත යවද්දී මේ Caption එක යාවි.*");
     } catch (e) {
-        console.error(e);
-        await reply("❌ Caption save failed.");
+        console.error("Caption Save Error:", e);
+        await reply(`❌ *Caption එක Save කිරීමේදී දෝෂයක්!* \n\n\`\`\`${e.message}\`\`\``);
     }
 });
+
