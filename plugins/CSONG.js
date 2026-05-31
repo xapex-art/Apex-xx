@@ -126,7 +126,8 @@ async (conn, mek, m, { from, args, reply, isOwner }) => {
                         .replace(/{title}/g, result.title || data.title)
                         .replace(/{views}/g, data.views)
                         .replace(/{duration}/g, data.timestamp)
-                        .replace(/{ago}/g, data.ago);
+                        .replace(/{ago}/g, data.ago)
+                        .replace(/{channelname}/g, channelname);
                 }
             }
         } catch (err) {
