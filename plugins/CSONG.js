@@ -50,7 +50,7 @@ async (conn, mek, m, { from, args, reply, isOwner }) => {
         }  
 
         // --- OPTION SELECTION CARD ---
-        const choiceText = `\`🎵 *CSONG SEND MANAGER*\`\n\n` +
+        const choiceText = `\`🎵 CSONG SEND MANAGER\`\n\n` +
             `\`Tɪᴛʟᴇ :\` ${data.title}\n` +
             `\`Dᴜʀᴀᴛɪᴏɴ :\` ${data.timestamp}\n` +
             `\`Tᴀʀɢᴇᴛ:\` ${channelname}\n\n` +
