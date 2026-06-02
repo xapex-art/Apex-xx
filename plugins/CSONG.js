@@ -50,13 +50,13 @@ async (conn, mek, m, { from, args, reply, isOwner }) => {
         }  
 
         // --- OPTION SELECTION CARD ---
-        const choiceText = `🎵 *SONG DOWNLOAD MANAGER* 🎵\n\n` +
-            `📝 *Title:* ${data.title}\n` +
-            `⏱️ *Duration:* ${data.timestamp}\n` +
-            `📢 *Target:* ${channelname}\n\n` +
-            `✨ *කරුණාකර මෙම පණිවිඩයට (Reply) අංකය ලබාදෙන්න:* \n\n` +
-            `*1️⃣ With Caption* (Thumbnail + Caption + Audio)\n` +
-            `*2️⃣ No Caption* (Audio Only)`;
+        const choiceText = `\`🎵 *CSONG SEND MANAGER*\`\n\n` +
+            `\`Tɪᴛʟᴇ :\` ${data.title}\n` +
+            `\`Dᴜʀᴀᴛɪᴏɴ :\` ${data.timestamp}\n` +
+            `\`Tᴀʀɢᴇᴛ:\` ${channelname}\n\n` +
+            `🌈 *කරුණාකර (Reply) අංකය ලබාදෙන්න:* \n\n` +
+            `\`1️⃣ Wɪᴛʜ Cᴀᴘᴛɪᴏɴ\` (Tʜᴜʙɴᴀɪʟ + Cᴀᴘᴛɪᴏɴ + Aᴜᴅɪᴏ)\n` +
+            `\`2️⃣ Nᴏ Cᴀᴘᴛɪᴏɴ\` (Aᴜᴅɪᴏ Oɴʟʏ)`;
 
         // Option Menu එක Image එකත් එක්කම යැවීම
         const sentMsg = await conn.sendMessage(from, { 
@@ -241,7 +241,7 @@ async (conn, mek, m, { args, reply, isOwner }) => {
     
     const newCaption = args.join(" ");
     if (!newCaption) {
-        return await reply(`❌ *Caption එකක් ලබා දෙන්න.*\n\n*උදාහරණ:* \n.setcsong > ꜱᴏɴɢ ᴜᴘʟᴏᴀᴅᴇඩ් ʙʏ ᴛʜᴇ ᴏᴡɴᴇʀ\n\n☘️ Title: {title}\n❐ 🚀 Vɪᴇᴡꜱ : {views}\n❐ ⏱️ Dᴜʀᴀᴛɪᴏɴ : {duration}\n❐ 📅 Rᴇʟᴇᴀꜱᴇ Dᴀᴛេ : {ago}`);
+        return await reply(`❌ *Caption එකක් ලබා දෙන්න.*\n\n*උදාහරණ:* \n.setcsong Title: {title}\nVɪᴇᴡꜱ : {views}\nDᴜʀᴀᴛɪᴏɴ : {duration}\n Rᴇʟᴇᴀꜱᴇ Dᴀᴛᴇ : {ago}`);
     }
 
     try {
@@ -262,7 +262,7 @@ async (conn, mek, m, { args, reply, isOwner }) => {
         savedData[sender] = newCaption;
         
         fs.writeFileSync(captionFile, JSON.stringify(savedData, null, 2));
-        await reply("✅ *ඔබගේ පුද්ගලික Custom Caption එක සාර්ථකව Save කළා! මින් ඉදිරියට ඔබ ගීත යවද්දී මේ Caption එක යාවි.*");
+        await reply("✅ *Custom Caption එක සාර්ථකව Save කළා!*");
     } catch (e) {
         console.error("Caption Save Error:", e);
         await reply(`❌ *Caption එක Save කිරීමේදී දෝෂයක්!* \n\n\`\`\`${e.message}\`\`\``);
