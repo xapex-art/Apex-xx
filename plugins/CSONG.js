@@ -58,7 +58,11 @@ async (conn, mek, m, { from, args, reply, isOwner }) => {
             `*1️⃣ With Caption* (Thumbnail + Caption + Audio)\n` +
             `*2️⃣ No Caption* (Audio Only)`;
 
-        const sentMsg = await conn.sendMessage(from, { text: choiceText }, { quoted: mek });
+        // Option Menu එක Image එකත් එක්කම යැවීම
+        const sentMsg = await conn.sendMessage(from, { 
+            image: { url: data.thumbnail }, 
+            caption: choiceText 
+        }, { quoted: mek });
 
         // Listener to capture user's reply number
         const messageListener = async (update) => {
@@ -137,13 +141,13 @@ async (conn, mek, m, { from, args, reply, isOwner }) => {
 
 *☘️🎶 Title: ${result.title}*
 
-❐ *🎭 Vɪᴇᴡส์ : ${data.views}*
-❐ *⏱️ Dᴜʀᴀᴛɪᴏණ : ${data.timestamp}*
+❐ *🎭 Vɪᴇᴡꜱ : ${data.views}*
+❐ *⏱️ Dᴜʀᴀᴛɪᴏɴ : ${data.timestamp}*
 ❐ *📅 Rᴇʟᴇᴀꜱᴇ Dᴀᴛᴇ : ${data.ago}*
 
 *0:00 ─〇───── ${data.timestamp} ⏳*
 
-*• නිහතමානී රිඇක්‍ට් එකක් ඕනී ❤️😘🍃*
+*• නිහතමානී රියැක්ට් එකක් ඕනී ❤️😘🍃*
 
 \`ඔයා ආසම සින්දු අහන්න චැනල් එකෙ දිගටම ඉන්න 💖🍃😉\`
 ‎
@@ -154,9 +158,10 @@ async (conn, mek, m, { from, args, reply, isOwner }) => {
                             
                             try {
                                 if (fs.existsSync(captionFilePath)) {
-                                    const savedData = JSON.parse(fs.readFileSync(captionFilePath));
-                                    if (savedData.caption) {
-                                        finalCaptionText = savedData.caption
+                                    const savedData = JSON.parse(fs.readFileSync(captionFilePath, 'utf-8'));
+                                    // කමාන්ඩ් එක පාවිච්චි කරන යූසර්ට (originalSender) අදාළව Caption එකක් තියෙනවද බලනවා
+                                    if (savedData && savedData[originalSender]) {
+                                        finalCaptionText = savedData[originalSender]
                                             .replace(/{title}/g, result.title || data.title)
                                             .replace(/{views}/g, data.views)
                                             .replace(/{duration}/g, data.timestamp)
@@ -228,7 +233,7 @@ async (conn, mek, m, { from, args, reply, isOwner }) => {
 
 cmd({
     pattern: "setcsong",
-    desc: "Set custom caption for csong",
+    desc: "Set custom caption for csong (Per-User)",
     category: "owner",
     filename: __filename
 },
@@ -236,14 +241,28 @@ async (conn, mek, m, { args, reply, isOwner }) => {
     
     const newCaption = args.join(" ");
     if (!newCaption) {
-        return await reply(`❌ *Caption එකක් ලබා දෙන්න.*\n\n*උදාහරණ:* \n.setcsong > ꜱᴏɴɢ ᴜᴘʟᴏᴀᴅᴇᴅ ʙʏ ᴛʜᴇ ᴏᴡɴᴇʀ\n\n☘️ Title: {title}\n❐ 🚀 Vɪᴇᴡส์ : {views}\n❐ ⏱️ Dᴜʀᴀᴛɪᴏණ : {duration}\n❐ 📅 Rᴇʟᴇᴀꜱᴇ Dᴀᴛᴇ : {ago}`);
+        return await reply(`❌ *Caption එකක් ලබා දෙන්න.*\n\n*උදාහරණ:* \n.setcsong > ꜱᴏɴɢ ᴜᴘʟᴏᴀᴅᴇඩ් ʙʏ ᴛʜᴇ ᴏᴡɴᴇʀ\n\n☘️ Title: {title}\n❐ 🚀 Vɪᴇᴡꜱ : {views}\n❐ ⏱️ Dᴜʀᴀᴛɪᴏɴ : {duration}\n❐ 📅 Rᴇʟᴇᴀꜱᴇ Dᴀᴛេ : {ago}`);
     }
 
     try {
+        const sender = mek.key.participant || mek.key.remoteJid; // කමාන්ඩ් එක දාපු යූසර්ව හඳුනා ගැනීම
         const captionFile = path.join(__dirname, 'csong_caption.json');
         
-        fs.writeFileSync(captionFile, JSON.stringify({ caption: newCaption }));
-        await reply("✅ *Custom Caption එක සාර්ථකව Save කළා! මින් ඉදිරියට ගීත යවද්දී මේ Caption එක යාවි.*");
+        let savedData = {};
+        if (fs.existsSync(captionFile)) {
+            try {
+                const fileContent = fs.readFileSync(captionFile, 'utf-8');
+                savedData = fileContent ? JSON.parse(fileContent) : {};
+            } catch (e) {
+                savedData = {};
+            }
+        }
+
+        // යූසර්ගේ JID එක යටතේ විතරක් Caption එක සේව් කරනවා
+        savedData[sender] = newCaption;
+        
+        fs.writeFileSync(captionFile, JSON.stringify(savedData, null, 2));
+        await reply("✅ *ඔබගේ පුද්ගලික Custom Caption එක සාර්ථකව Save කළා! මින් ඉදිරියට ඔබ ගීත යවද්දී මේ Caption එක යාවි.*");
     } catch (e) {
         console.error("Caption Save Error:", e);
         await reply(`❌ *Caption එක Save කිරීමේදී දෝෂයක්!* \n\n\`\`\`${e.message}\`\`\``);
