@@ -39,55 +39,6 @@ async (conn, mek, m, { from, args, reply, isOwner }) => {
         const ytUrl = data.url;  
         console.log("🎬 YouTube:", ytUrl);  
 
-        // --- Aluth API eka saha Base Key eka ---
-        const apiKey = "ec6c9505fa330141f4b3f458a9c72158";
-        const api = `https://apis.sadas.dev/api/v1/download/youtube?q=${encodeURIComponent(ytUrl)}&format=mp3&apiKey=${apiKey}`;  
-        const { data: apiRes } = await axios.get(api);  
-
-        // API structure eka wenas unath error nathiwa wada karanna hadala thiyenawa
-        const result = apiRes?.result || apiRes?.data || apiRes;
-        const mp3Url = result?.downloadUrl || result?.url || result?.download;
-
-        if (!mp3Url) {  
-            console.log("API Error Response:", apiRes);  
-            return await reply("❌ *ගීතය බාගත කළ නොහැක!*");  
-        }  
-
-        // Title eka API eken awe naththam yt-search eken gannawa
-        if (!result.title) result.title = data.title;
-
-        console.log("🎧 Download URL:", mp3Url);  
-
-        const tempMp3 = path.join(os.tmpdir(), `csong_temp_${Date.now()}.mp3`);  
-        const tempOpus = path.join(os.tmpdir(), `csong_temp_${Date.now()}.opus`);  
-
-        const mp3Res = await axios.get(mp3Url, { responseType: "arraybuffer" });  
-        fs.writeFileSync(tempMp3, Buffer.from(mp3Res.data));  
-
-        if (!fs.existsSync(tempMp3)) return await reply("❌ *MP3 ගොනුව සාදන ලදි නැහැ!*");  
-
-        let opusReady = false;  
-        try {  
-            await new Promise((resolve, reject) => {  
-                ffmpeg(tempMp3)  
-                    .audioCodec("libopus")  
-                    .format("opus")  
-                    .on("end", () => {  
-                        if (fs.existsSync(tempOpus)) {  
-                            opusReady = true;  
-                            resolve();  
-                        } else reject(new Error("No opus file created"));  
-                    })  
-                    .on("error", (err) => {  
-                        console.error("❌ FFmpeg Error:", err.message);  
-                        reject(err);  
-                    })  
-                    .save(tempOpus);  
-            });  
-        } catch (err) {  
-            console.warn("⚠️ Opus conversion failed. Fallback to MP3.");  
-        }  
-
         let channelname = targetJid;  
         try {  
             const metadata = await conn.newsletterMetadata("jid", targetJid);  
@@ -98,13 +49,96 @@ async (conn, mek, m, { from, args, reply, isOwner }) => {
             // console.error("Newsletter metadata error:", err);  
         }  
 
-                // --- CUSTOM CAPTION EKA GANA KOTASA ---
-        let finalCaptionText = `> ꜱᴏɴɢ ᴜᴘʟᴏᴀᴅᴇᴅ ʙʏ ᴛʜᴇ ᴏᴡɴᴇʀ : Gavishka Manidu
+        // --- OPTION SELECTION CARD ---
+        const choiceText = `🎵 *SONG DOWNLOAD MANAGER* 🎵\n\n` +
+            `📝 *Title:* ${data.title}\n` +
+            `⏱️ *Duration:* ${data.timestamp}\n` +
+            `📢 *Target:* ${channelname}\n\n` +
+            `✨ *කරුණාකර මෙම පණිවිඩයට (Reply) අංකය ලබාදෙන්න:* \n\n` +
+            `*1️⃣ With Caption* (Thumbnail + Caption + Audio)\n` +
+            `*2️⃣ No Caption* (Audio Only)`;
+
+        const sentMsg = await conn.sendMessage(from, { text: choiceText }, { quoted: mek });
+
+        // Listener to capture user's reply number
+        const messageListener = async (update) => {
+            try {
+                if (!update.messages || !update.messages[0]) return;
+                const msg = update.messages[0];
+                if (!msg.message) return;
+
+                const type = Object.keys(msg.message)[0];
+                const contextInfo = msg.message[type]?.contextInfo;
+                const quotedMsgId = contextInfo?.stanzaId;
+                const sender = msg.key.participant || msg.key.remoteJid;
+                const originalSender = mek.key.participant || mek.key.remoteJid;
+
+                // Check if the reply is for our option card and from the correct user
+                if (quotedMsgId === sentMsg.key.id && sender === originalSender) {
+                    const userChoice = (msg.message.conversation || msg.message.extendedTextMessage?.text || "").trim();
+
+                    if (userChoice === "1" || userChoice === "2") {
+                        // Unregister listener and clear timeout
+                        conn.ev.off("messages.upsert", messageListener);
+                        clearTimeout(choiceTimeout);
+
+                        await reply(`⏳ *Processing Option ${userChoice}... Please wait!*`);
+
+                        // --- Aluth API eka saha Base Key eka ---
+                        const apiKey = "ec6c9505fa330141f4b3f458a9c72158";
+                        const api = `https://apis.sadas.dev/api/v1/download/youtube?q=${encodeURIComponent(ytUrl)}&format=mp3&apiKey=${apiKey}`;  
+                        const { data: apiRes } = await axios.get(api);  
+
+                        const result = apiRes?.result || apiRes?.data || apiRes;
+                        const mp3Url = result?.downloadUrl || result?.url || result?.download;
+
+                        if (!mp3Url) {  
+                            console.log("API Error Response:", apiRes);  
+                            return await reply("❌ *ගීතය බාගත කළ නොහැක!*");  
+                        }  
+
+                        if (!result.title) result.title = data.title;
+
+                        console.log("🎧 Download URL:", mp3Url);  
+
+                        const tempMp3 = path.join(os.tmpdir(), `csong_temp_${Date.now()}.mp3`);  
+                        const tempOpus = path.join(os.tmpdir(), `csong_temp_${Date.now()}.opus`);  
+
+                        const mp3Res = await axios.get(mp3Url, { responseType: "arraybuffer" });  
+                        fs.writeFileSync(tempMp3, Buffer.from(mp3Res.data));  
+
+                        if (!fs.existsSync(tempMp3)) return await reply("❌ *MP3 ගොනුව සාදන ලදි නැහැ!*");  
+
+                        let opusReady = false;  
+                        try {  
+                            await new Promise((resolve, reject) => {  
+                                ffmpeg(tempMp3)  
+                                    .audioCodec("libopus")  
+                                    .format("opus")  
+                                    .on("end", () => {  
+                                        if (fs.existsSync(tempOpus)) {  
+                                            opusReady = true;  
+                                            resolve();  
+                                        } else reject(new Error("No opus file created"));  
+                                    })  
+                                    .on("error", (err) => {  
+                                        console.error("❌ FFmpeg Error:", err.message);  
+                                        reject(err);  
+                                    })  
+                                    .save(tempOpus);  
+                            });  
+                        } catch (err) {  
+                            console.warn("⚠️ Opus conversion failed. Fallback to MP3.");  
+                        }  
+
+                        // --- SEND IMAGE & CAPTION ONLY IF OPTION 1 IS SELECTED ---
+                        if (userChoice === "1") {
+                            let finalCaptionText = `> ꜱᴏɴɢ ᴜᴘʟᴏᴀᴅᴇᴅ ʙʏ ᴛʜᴇ ᴏᴡɴᴇʀ : Gavishka Manidu
 
 *☘️🎶 Title: ${result.title}*
 
-❐ *🎭 Vɪᴇᴡꜱ : ${data.views}*
-❐ *⏱️ Dᴜʀᴀᴛɪᴏɴ : ${data.timestamp}*
+❐ *🎭 Vɪᴇᴡส์ : ${data.views}*
+❐ *⏱️ Dᴜʀᴀᴛɪᴏණ : ${data.timestamp}*
 ❐ *📅 Rᴇʟᴇᴀꜱᴇ Dᴀᴛᴇ : ${data.ago}*
 
 *0:00 ─〇───── ${data.timestamp} ⏳*
@@ -114,63 +148,77 @@ async (conn, mek, m, { from, args, reply, isOwner }) => {
 \`ඔයා ආසම සින්දු අහන්න චැනල් එකෙ දිගටම ඉන්න 💖🍃😉\`
 ‎
 *_Mind Relax Song Use headphones for_*
-*_best experience 🎧🙇_*`; // Meka default caption eka
+*_best experience 🎧🙇_*`;
 
-        const captionFilePath = path.join(__dirname, 'csong_caption.json');
-        
-        try {
-            if (fs.existsSync(captionFilePath)) {
-                const savedData = JSON.parse(fs.readFileSync(captionFilePath));
-                if (savedData.caption) {
-                    finalCaptionText = savedData.caption
-                        .replace(/{title}/g, result.title || data.title)
-                        .replace(/{views}/g, data.views)
-                        .replace(/{duration}/g, data.timestamp)
-                        .replace(/{ago}/g, data.ago)
-                        .replace(/{channelname}/g, channelname);
+                            const captionFilePath = path.join(__dirname, 'csong_caption.json');
+                            
+                            try {
+                                if (fs.existsSync(captionFilePath)) {
+                                    const savedData = JSON.parse(fs.readFileSync(captionFilePath));
+                                    if (savedData.caption) {
+                                        finalCaptionText = savedData.caption
+                                            .replace(/{title}/g, result.title || data.title)
+                                            .replace(/{views}/g, data.views)
+                                            .replace(/{duration}/g, data.timestamp)
+                                            .replace(/{ago}/g, data.ago)
+                                            .replace(/{channelname}/g, channelname);
+                                    }
+                                }
+                            } catch (err) {
+                                console.log("Caption read error:", err);
+                            }
+
+                            try {  
+                                console.log(`📤 Sending image & caption to: ${targetJid}`);  
+                                await conn.sendMessage(targetJid, {  
+                                    image: { url: data.thumbnail },  
+                                    caption: finalCaptionText, 
+                                });  
+                            } catch (err) {  
+                                console.error("❌ Thumbnail Send Error:", err);  
+                                await reply(`*Image යැවීමේදී දෝෂයක්!* \n\n\`\`\`${err.message || err}\`\`\``);  
+                            }  
+                        }  
+
+                        // --- AUDIO SENDING (FOR BOTH OPTIONS) ---
+                        try {  
+                            console.log(`📤 Sending Audio to: ${targetJid}`);  
+                            if (opusReady && fs.existsSync(tempOpus)) {  
+                                const opusBuffer = fs.readFileSync(tempOpus);  
+                                await conn.sendMessage(targetJid, {  
+                                    audio: opusBuffer,  
+                                    mimetype: "audio/ogg; codecs=opus",  
+                                    ptt: false,   
+                                });  
+                            } else {  
+                                await conn.sendMessage(targetJid, {  
+                                    audio: fs.readFileSync(tempMp3),  
+                                    mimetype: "audio/mpeg",  
+                                    ptt: false,  
+                                });  
+                            }  
+                            await reply(`✅ *${result.title}* successfully sent to *${channelname}* 😎🎶`);  
+                        } catch (err) {  
+                            console.error("❌ Audio Send Error:", err);  
+                            await reply(`*Audio යැවීමේදී දෝෂයක්!* \n\n\`\`\`${err.message || err}\`\`\``);  
+                        }  
+
+                        if (fs.existsSync(tempMp3)) fs.unlinkSync(tempMp3);  
+                        if (fs.existsSync(tempOpus)) fs.unlinkSync(tempOpus);  
+                    }
                 }
+            } catch (err) {
+                console.error("Error in selection listener:", err);
             }
-        } catch (err) {
-            console.log("Caption read error:", err);
-        }
-        // --------------------------------------
+        };
 
-        try {  
-            console.log(`📤 Sending image & caption to: ${targetJid}`);  
-            await conn.sendMessage(targetJid, {  
-                image: { url: data.thumbnail },  
-                caption: finalCaptionText, // <-- Methanata finalCaptionText danna
-            });  
-        } catch (err) {  
-            console.error("❌ Thumbnail Send Error:", err);  
-            await reply(`*Image යැවීමේදී දෝෂයක්!* \n\n\`\`\`${err.message || err}\`\`\``);  
-        }  
-  
+        // 2 Minutes timeout if user does not reply to the card
+        const choiceTimeout = setTimeout(() => {
+            conn.ev.off("messages.upsert", messageListener);
+            reply("❌ *කාලය ඉකුත් විය! කරුණාකර නැවත උත්සාහ කරන්න.*");
+        }, 120000);
 
-        try {  
-            console.log(`📤 Sending Audio to: ${targetJid}`);  
-            if (opusReady && fs.existsSync(tempOpus)) {  
-                const opusBuffer = fs.readFileSync(tempOpus);  
-                await conn.sendMessage(targetJid, {  
-                    audio: opusBuffer,  
-                    mimetype: "audio/ogg; codecs=opus",  
-                    ptt: false,   
-                });  
-            } else {  
-                await conn.sendMessage(targetJid, {  
-                    audio: fs.readFileSync(tempMp3),  
-                    mimetype: "audio/mpeg",  
-                    ptt: false,  
-                });  
-            }  
-            await reply(`✅ *${result.title}* successfully sent to *${channelname}* 😎🎶`);  
-        } catch (err) {  
-            console.error("❌ Audio Send Error:", err);  
-            await reply(`*Audio යැවීමේදී දෝෂයක්!* \n\n\`\`\`${err.message || err}\`\`\``);  
-        }  
-
-        if (fs.existsSync(tempMp3)) fs.unlinkSync(tempMp3);  
-        if (fs.existsSync(tempOpus)) fs.unlinkSync(tempOpus);  
+        conn.ev.on("messages.upsert", messageListener);
 
     } catch (e) {  
         console.error("CSong Fatal Error:", e);  
@@ -186,14 +234,12 @@ cmd({
 },
 async (conn, mek, m, { args, reply, isOwner }) => {
     
-    // (Option එකක් විදිහට මේක අයින් කරලා තියෙන්නේ ඔයාගේ කෝඩ් එකේ, ඕන නම් isOwner කෑල්ල දාගන්න පුළුවන්)
     const newCaption = args.join(" ");
     if (!newCaption) {
-        return await reply(`❌ *Caption එකක් ලබා දෙන්න.*\n\n*උදාහරණ:* \n.setcsong > ꜱᴏɴɢ ᴜᴘʟᴏᴀᴅᴇᴅ ʙʏ ᴛʜᴇ ᴏᴡɴᴇʀ\n\n☘️ Title: {title}\n❐ 🚀 Vɪᴇᴡꜱ : {views}\n❐ ⏱️ Dᴜʀᴀᴛɪᴏɴ : {duration}\n❐ 📅 Rᴇʟᴇᴀꜱᴇ Dᴀᴛᴇ : {ago}`);
+        return await reply(`❌ *Caption එකක් ලබා දෙන්න.*\n\n*උදාහරණ:* \n.setcsong > ꜱᴏɴɢ ᴜᴘʟᴏᴀᴅᴇᴅ ʙʏ ᴛʜᴇ ᴏᴡɴᴇʀ\n\n☘️ Title: {title}\n❐ 🚀 Vɪᴇᴡส์ : {views}\n❐ ⏱️ Dᴜʀᴀᴛɪᴏණ : {duration}\n❐ 📅 Rᴇʟᴇᴀꜱᴇ Dᴀᴛᴇ : {ago}`);
     }
 
     try {
-        // මෙන්න මේ ලයින් එක තමයි අඩු වෙලා තිබ්බේ
         const captionFile = path.join(__dirname, 'csong_caption.json');
         
         fs.writeFileSync(captionFile, JSON.stringify({ caption: newCaption }));
