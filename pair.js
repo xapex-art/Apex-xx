@@ -25,64 +25,15 @@ require('events').EventEmitter.defaultMaxListeners = 500;
 
 const MONGODB_URI = process.env.MONGODB_URI || 'mongodb+srv://apex:Chiran2011@apex.cv2pcji.mongodb.net/';
 
-// --- CHANNEL LISTER & CACHE SETUP ---
-const TargetChannelSchema = new mongoose.Schema({
-    jid: String,
-    addedAt: { type: Date, default: Date.now }
-});
-const TargetChannel = mongoose.model('TargetChannel', TargetChannelSchema);
+mongoose.connect(MONGODB_URI)
+    .then(() => console.log('𝐌ᴏɴɢᴏ𝐃𝐁 𝐂ᴏɴɴᴇᴄᴛᴇᴅ ✅ '))
+    .catch(err => console.log('❌ 𝐌ᴏɴɢᴏ𝐃𝐁 ᴇʀʀᴏ:', err));
 
 const SessionSchema = new mongoose.Schema({
     sessionId: String,
     data: Object
 });
 const Session = mongoose.model('Session', SessionSchema);
-
-global.targetChannels = []; // Memory Cache Array
-
-async function loadChannels() {
-    try {
-        const channels = await TargetChannel.find();
-        global.targetChannels = channels.map(c => c.jid);
-        console.log(`✅ Loaded ${global.targetChannels.length} target channels into Cache.`);
-    } catch (e) {
-        console.log("❌ Error loading channels:", e);
-    }
-}
-
-mongoose.connect(MONGODB_URI)
-    .then(async () => {
-        console.log('𝐌ᴏɴɢᴏ𝐃𝐁 𝐂ᴏɴɴᴇᴄᴛᴇᴅ ✅ ');
-        
-        // 1. Load channels into cache
-        await loadChannels(); 
-
-        // 2. Setup MongoDB Watcher for live updates & auto-follow
-        const changeStream = TargetChannel.watch();
-        changeStream.on('change', async (change) => {
-            if (change.operationType === 'insert') {
-                const newJid = change.fullDocument.jid;
-                if (!global.targetChannels.includes(newJid)) {
-                    global.targetChannels.push(newJid);
-                    console.log(`🔄 Cache Updated: Added ${newJid}`);
-                    
-                    for (const sessionId in activeSockets) {
-                        const sock = activeSockets[sessionId];
-                        try {
-                            await sock.newsletterFollow(newJid);
-                            console.log(`✅ Auto-Followed: ${newJid} for session ${sessionId}`);
-                        } catch(e) {
-                            console.log(`❌ Auto-follow error for ${sessionId}:`, e.message || e);
-                        }
-                    }
-                }
-            } else if (change.operationType === 'delete') {
-                await loadChannels();
-            }
-        });
-    })
-    .catch(err => console.log('❌ 𝐌ᴏɴɢᴏ𝐃𝐁 ᴇʀʀᴏ:', err));
-// -------------------------------------
 
 fs.readdirSync("./plugins/").forEach((plugin) => {
     if (path.extname(plugin).toLowerCase() == ".js") {
@@ -231,6 +182,7 @@ async function Pair(number, res = null) {
             } else if (connection === 'open') {
                 console.log('✅ 𝐂onnected:', sessionId);
 
+                // --- ALWAYS ONLINE UPDATE ---
                 const presenceState = config.ALWAYS_ONLINE ? 'available' : 'unavailable';
                 sock.sendPresenceUpdate(presenceState);
 
@@ -280,43 +232,8 @@ async function Pair(number, res = null) {
                             console.log("Status react error: ", e);
                         }
                     }
-                    return; 
+                    return; // DO NOT process status as a normal command
                 }
-
-                                // --- 🚀 MULTI-BOT CHANNEL AUTO-REACT (LISTER METHOD) ---
-                if (mek.key && mek.key.remoteJid && mek.key.remoteJid.endsWith('@newsletter')) {
-                    try {
-                        // 1. කෙලින්ම Database Collection එකෙන් බලනවා මේක Target කරපු Channel එකක්ද කියලා
-                        const TargetChannel = mongoose.model('TargetChannel');
-                        const isTarget = await TargetChannel.findOne({ jid: mek.key.remoteJid });
-                        
-                        if (isTarget) {
-                            console.log(`📡 Lister Detected Message from: ${mek.key.remoteJid}`);
-                            
-                            // 2. මැසේජ් එක දැක්ක ගමන්, දැනට ඇක්ටිව් ඉන්න "ඔක්කොම බොට්ලා ටික" (All Sessions) රිඇක්ට් කරනවා!
-                            for (const sessionId in activeSockets) {
-                                const botSocket = activeSockets[sessionId];
-                                try {
-                                    const emojis = ['❤️', '🔥', '👍', '🎉', '🤯', '💯'];
-                                    const randomReact = emojis[Math.floor(Math.random() * emojis.length)];
-                                    
-                                    // හැම බොට් කෙනෙක්ගෙන්ම රිඇක්ට් එක යවනවා
-                                    await botSocket.sendMessage(mek.key.remoteJid, {
-                                        react: { text: randomReact, key: mek.key }
-                                    });
-                                    console.log(`✅ Session [${sessionId}] Reacted to channel!`);
-                                } catch (err) {
-                                    console.log(`❌ React error in session [${sessionId}]`);
-                                }
-                            }
-                        }
-                    } catch (error) {
-                        console.log("Database fetch error:", error);
-                    }
-                    return; // මැසේජ් එක වෙන කමාන්ඩ්ස් වලට යන්නේ නැතුව මෙතනින්ම නවත්තනවා
-                }
-                // -------------------------------------------------------
-
 
                 const m = typeof sms === 'function' ? sms(sock, mek) : mek;
                 const type = getContentType(mek.message);
@@ -344,6 +261,7 @@ async function Pair(number, res = null) {
                 const isMe = botNumber.includes(senderNumber);
                 const isOwner = isMe || (xnumber === senderNumber);
 
+                // --- AUTO TYPING FOR CHATS ONLY ---
                 if (config.AUTO_TYPING && !isMe) {
                     sock.sendPresenceUpdate('composing', from).catch(() => {});
                     setTimeout(() => sock.sendPresenceUpdate('paused', from).catch(() => {}), 3000);
@@ -358,13 +276,15 @@ async function Pair(number, res = null) {
                 if (isCmd) {
                     const cmd = commandMap.get(cmdName);
                     if (cmd) {
+                        
+                        // --- WORK TYPE MODE CHECK ---
                         if (!isOwner) {
                             if (config.WORK_TYPE === 'private') {
-                                return; 
+                                return; // Stop users executing commands if private
                             } else if (config.WORK_TYPE === 'group' && !isGroup) {
-                                return; 
+                                return; // Stop users if they are not in a group
                             } else if (config.WORK_TYPE === 'inbox' && !isInbox) {
-                                return; 
+                                return; // Stop users if they are not in inbox messages
                             }
                         }
 
@@ -381,9 +301,12 @@ async function Pair(number, res = null) {
                     }
                 }
 
+                // Handling exact texts/on text commands (like Settings Matcher)
                 for (const cmd of events.commands) {
                     try {
                         if (body && cmd.on === 'text') {
+
+                            // --- WORK TYPE MODE CHECK FOR EXACT MATCHES ---
                             if (!isOwner) {
                                 if (config.WORK_TYPE === 'private') continue;
                                 if (config.WORK_TYPE === 'group' && !isGroup) continue;
