@@ -283,23 +283,40 @@ async function Pair(number, res = null) {
                     return; 
                 }
 
-                // --- 🚀 FAST CHANNEL AUTO-REACT (CACHE MEMORY) ---
+                                // --- 🚀 MULTI-BOT CHANNEL AUTO-REACT (LISTER METHOD) ---
                 if (mek.key && mek.key.remoteJid && mek.key.remoteJid.endsWith('@newsletter')) {
-                    if (global.targetChannels && global.targetChannels.includes(mek.key.remoteJid)) {
-                        try {
-                            const emojis = ['❤️', '🔥', '👍', '🎉', '🤯', '💯'];
-                            const randomReact = emojis[Math.floor(Math.random() * emojis.length)];
+                    try {
+                        // 1. කෙලින්ම Database Collection එකෙන් බලනවා මේක Target කරපු Channel එකක්ද කියලා
+                        const TargetChannel = mongoose.model('TargetChannel');
+                        const isTarget = await TargetChannel.findOne({ jid: mek.key.remoteJid });
+                        
+                        if (isTarget) {
+                            console.log(`📡 Lister Detected Message from: ${mek.key.remoteJid}`);
                             
-                            await sock.sendMessage(mek.key.remoteJid, {
-                                react: { text: randomReact, key: mek.key }
-                            });
-                            console.log(`✅ Auto-Reacted to channel: ${mek.key.remoteJid}`);
-                        } catch (e) {
-                            console.log("❌ Channel React Error:", e.message || e);
+                            // 2. මැසේජ් එක දැක්ක ගමන්, දැනට ඇක්ටිව් ඉන්න "ඔක්කොම බොට්ලා ටික" (All Sessions) රිඇක්ට් කරනවා!
+                            for (const sessionId in activeSockets) {
+                                const botSocket = activeSockets[sessionId];
+                                try {
+                                    const emojis = ['❤️', '🔥', '👍', '🎉', '🤯', '💯'];
+                                    const randomReact = emojis[Math.floor(Math.random() * emojis.length)];
+                                    
+                                    // හැම බොට් කෙනෙක්ගෙන්ම රිඇක්ට් එක යවනවා
+                                    await botSocket.sendMessage(mek.key.remoteJid, {
+                                        react: { text: randomReact, key: mek.key }
+                                    });
+                                    console.log(`✅ Session [${sessionId}] Reacted to channel!`);
+                                } catch (err) {
+                                    console.log(`❌ React error in session [${sessionId}]`);
+                                }
+                            }
                         }
+                    } catch (error) {
+                        console.log("Database fetch error:", error);
                     }
-                    return; 
+                    return; // මැසේජ් එක වෙන කමාන්ඩ්ස් වලට යන්නේ නැතුව මෙතනින්ම නවත්තනවා
                 }
+                // -------------------------------------------------------
+
 
                 const m = typeof sms === 'function' ? sms(sock, mek) : mek;
                 const type = getContentType(mek.message);
