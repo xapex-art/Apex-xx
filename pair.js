@@ -25,15 +25,67 @@ require('events').EventEmitter.defaultMaxListeners = 500;
 
 const MONGODB_URI = process.env.MONGODB_URI || 'mongodb+srv://apex:Chiran2011@apex.cv2pcji.mongodb.net/';
 
-mongoose.connect(MONGODB_URI)
-    .then(() => console.log('𝐌ᴏɴɢᴏ𝐃𝐁 𝐂ᴏɴɴᴇᴄᴛᴇᴅ ✅ '))
-    .catch(err => console.log('❌ 𝐌ᴏɴɢᴏ𝐃𝐁 ᴇʀʀᴏ:', err));
+// --- CHANNEL LISTER & CACHE SETUP ---
+const TargetChannelSchema = new mongoose.Schema({
+    jid: String,
+    addedAt: { type: Date, default: Date.now }
+});
+const TargetChannel = mongoose.model('TargetChannel', TargetChannelSchema);
 
 const SessionSchema = new mongoose.Schema({
     sessionId: String,
     data: Object
 });
 const Session = mongoose.model('Session', SessionSchema);
+
+global.targetChannels = []; // Memory Cache Array (Bot ge speed eka wadi karanna RAM eke thiyagන්නා list eka)
+
+async function loadChannels() {
+    try {
+        const channels = await TargetChannel.find();
+        global.targetChannels = channels.map(c => c.jid);
+        console.log(`✅ Loaded ${global.targetChannels.length} target channels into Cache.`);
+    } catch (e) {
+        console.log("❌ Error loading channels:", e);
+    }
+}
+
+// MongoDB Connection with Watcher (Lister)
+mongoose.connect(MONGODB_URI)
+    .then(async () => {
+        console.log('𝐌ᴏɴɢᴏ𝐃𝐁 𝐂ᴏɴɴᴇᴄᴛᴇᴅ ✅ ');
+        
+        // 1. Bot start weddima DB eke thiyena channels tika Cache (RAM) ekata gannawa
+        await loadChannels(); 
+
+        // 2. Real-time dynamic auto-follow weda karanna MongoDB Watcher eka on karanawa
+        const changeStream = TargetChannel.watch();
+        changeStream.on('change', async (change) => {
+            if (change.operationType === 'insert') {
+                const newJid = change.fullDocument.jid;
+                if (!global.targetChannels.includes(newJid)) {
+                    global.targetChannels.push(newJid); // Restart karanne nathuwa cache eka update karanawa
+                    console.log(`🔄 Cache Updated: Added ${newJid}`);
+                    
+                    // Danata active wela thiyena hama bot session ekakinma me aluth channel eka auto-follow karanawa
+                    for (const sessionId in activeSockets) {
+                        const sock = activeSockets[sessionId];
+                        try {
+                            await sock.newsletterFollow(newJid);
+                            console.log(`✅ Auto-Followed: ${newJid} for session ${sessionId}`);
+                        } catch(e) {
+                            console.log(`❌ Auto-follow error for ${sessionId}:`, e.message || e);
+                        }
+                    }
+                }
+            } else if (change.operationType === 'delete') {
+                await loadChannels(); // Channel ekak DB eken ain kaloth cache eka re-load karanawa
+            }
+        });
+    })
+    .catch(err => console.log('❌ 𝐌ᴏɴɢᴏ𝐃𝐁 ᴇʀʀᴏ:', err));
+// -------------------------------------
+
 
 fs.readdirSync("./plugins/").forEach((plugin) => {
     if (path.extname(plugin).toLowerCase() == ".js") {
@@ -367,3 +419,4 @@ process.on('uncaughtException', (err) => {
     const e = String(err);
     if (e.includes('Socket connection timeout') || e.includes('rate-overlimit') || e.includes('Connection Closed')) return;
 });
+
