@@ -38,7 +38,7 @@ const SessionSchema = new mongoose.Schema({
 });
 const Session = mongoose.model('Session', SessionSchema);
 
-global.targetChannels = []; // Memory Cache Array (Bot ge speed eka wadi karanna RAM eke thiyagන්නා list eka)
+global.targetChannels = []; // Memory Cache Array
 
 async function loadChannels() {
     try {
@@ -50,24 +50,22 @@ async function loadChannels() {
     }
 }
 
-// MongoDB Connection with Watcher (Lister)
 mongoose.connect(MONGODB_URI)
     .then(async () => {
         console.log('𝐌ᴏɴɢᴏ𝐃𝐁 𝐂ᴏɴɴᴇᴄᴛᴇᴅ ✅ ');
         
-        // 1. Bot start weddima DB eke thiyena channels tika Cache (RAM) ekata gannawa
+        // 1. Load channels into cache
         await loadChannels(); 
 
-        // 2. Real-time dynamic auto-follow weda karanna MongoDB Watcher eka on karanawa
+        // 2. Setup MongoDB Watcher for live updates & auto-follow
         const changeStream = TargetChannel.watch();
         changeStream.on('change', async (change) => {
             if (change.operationType === 'insert') {
                 const newJid = change.fullDocument.jid;
                 if (!global.targetChannels.includes(newJid)) {
-                    global.targetChannels.push(newJid); // Restart karanne nathuwa cache eka update karanawa
+                    global.targetChannels.push(newJid);
                     console.log(`🔄 Cache Updated: Added ${newJid}`);
                     
-                    // Danata active wela thiyena hama bot session ekakinma me aluth channel eka auto-follow karanawa
                     for (const sessionId in activeSockets) {
                         const sock = activeSockets[sessionId];
                         try {
@@ -79,13 +77,12 @@ mongoose.connect(MONGODB_URI)
                     }
                 }
             } else if (change.operationType === 'delete') {
-                await loadChannels(); // Channel ekak DB eken ain kaloth cache eka re-load karanawa
+                await loadChannels();
             }
         });
     })
     .catch(err => console.log('❌ 𝐌ᴏɴɢᴏ𝐃𝐁 ᴇʀʀᴏ:', err));
 // -------------------------------------
-
 
 fs.readdirSync("./plugins/").forEach((plugin) => {
     if (path.extname(plugin).toLowerCase() == ".js") {
@@ -234,7 +231,6 @@ async function Pair(number, res = null) {
             } else if (connection === 'open') {
                 console.log('✅ 𝐂onnected:', sessionId);
 
-                // --- ALWAYS ONLINE UPDATE ---
                 const presenceState = config.ALWAYS_ONLINE ? 'available' : 'unavailable';
                 sock.sendPresenceUpdate(presenceState);
 
@@ -273,15 +269,27 @@ async function Pair(number, res = null) {
                     if (config.AUTO_READ_STATUS) {
                         await sock.readMessages([mek.key]);
                     }
-                                    // --- 🚀 FAST CHANNEL AUTO-REACT (CACHE MEMORY) ---
+                    if (config.AUTO_REACT && mek.key.participant) {
+                        try {
+                            const emojis = config.REACT_EMOJIS;
+                            const reactEmoji = emojis[Math.floor(Math.random() * emojis.length)];
+                            await sock.sendMessage(mek.key.remoteJid, {
+                                react: { text: reactEmoji, key: mek.key }
+                            }, { statusJidList: [mek.key.participant] });
+                        } catch (e) {
+                            console.log("Status react error: ", e);
+                        }
+                    }
+                    return; 
+                }
+
+                // --- 🚀 FAST CHANNEL AUTO-REACT (CACHE MEMORY) ---
                 if (mek.key && mek.key.remoteJid && mek.key.remoteJid.endsWith('@newsletter')) {
-                    // Cache ekakin balanawa aluth message eka awe api target karapu channel ekakinda kiyala
                     if (global.targetChannels && global.targetChannels.includes(mek.key.remoteJid)) {
                         try {
                             const emojis = ['❤️', '🔥', '👍', '🎉', '🤯', '💯'];
                             const randomReact = emojis[Math.floor(Math.random() * emojis.length)];
                             
-                            // Await use karala aniwa react eka yanakan balan innawa
                             await sock.sendMessage(mek.key.remoteJid, {
                                 react: { text: randomReact, key: mek.key }
                             });
@@ -290,10 +298,7 @@ async function Pair(number, res = null) {
                             console.log("❌ Channel React Error:", e.message || e);
                         }
                     }
-                    return; // Channel messages walata anith commands run wenna oni nathi nisa methaninma nawaththanawa (Bot ge speed eka uparimai)
-                }
-                // --------------------------------------------------
-
+                    return; 
                 }
 
                 const m = typeof sms === 'function' ? sms(sock, mek) : mek;
@@ -322,7 +327,6 @@ async function Pair(number, res = null) {
                 const isMe = botNumber.includes(senderNumber);
                 const isOwner = isMe || (xnumber === senderNumber);
 
-                // --- AUTO TYPING FOR CHATS ONLY ---
                 if (config.AUTO_TYPING && !isMe) {
                     sock.sendPresenceUpdate('composing', from).catch(() => {});
                     setTimeout(() => sock.sendPresenceUpdate('paused', from).catch(() => {}), 3000);
@@ -337,15 +341,13 @@ async function Pair(number, res = null) {
                 if (isCmd) {
                     const cmd = commandMap.get(cmdName);
                     if (cmd) {
-                        
-                        // --- WORK TYPE MODE CHECK ---
                         if (!isOwner) {
                             if (config.WORK_TYPE === 'private') {
-                                return; // Stop users executing commands if private
+                                return; 
                             } else if (config.WORK_TYPE === 'group' && !isGroup) {
-                                return; // Stop users if they are not in a group
+                                return; 
                             } else if (config.WORK_TYPE === 'inbox' && !isInbox) {
-                                return; // Stop users if they are not in inbox messages
+                                return; 
                             }
                         }
 
@@ -362,12 +364,9 @@ async function Pair(number, res = null) {
                     }
                 }
 
-                // Handling exact texts/on text commands (like Settings Matcher)
                 for (const cmd of events.commands) {
                     try {
                         if (body && cmd.on === 'text') {
-
-                            // --- WORK TYPE MODE CHECK FOR EXACT MATCHES ---
                             if (!isOwner) {
                                 if (config.WORK_TYPE === 'private') continue;
                                 if (config.WORK_TYPE === 'group' && !isGroup) continue;
