@@ -6,6 +6,6 @@ module.exports = {
     AUTO_TYPING: process.env.AUTO_TYPING || false,
     AUTO_REACT: process.env.AUTO_REACT || false,
     AUTO_READ_STATUS: process.env.AUTO_READ_STATUS || false,
-    PREFIX: process.env.PREFIX || '.',
+    PREFIX: process.env.PREFIX || '/',
     REACT_EMOJIS: ['❤️', '👍', '😂', '🔥', '✨', '🌸', '✅']
 };
