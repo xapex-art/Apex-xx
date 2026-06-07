@@ -9,6 +9,9 @@ const { cmd, commands } = require('../command');
 
 if (ffmpegPath) ffmpeg.setFfmpegPath(ffmpegPath);
 
+// Firebase Database Base URL
+const FIREBASE_DB_URL = "https://chiran-social-552bd-default-rtdb.firebaseio.com/captions";
+
 cmd({
     pattern: "csong",  
     alias: ["csend"],  
@@ -137,12 +140,13 @@ async (conn, mek, m, { from, args, reply, isOwner }) => {
 
                         // --- SEND IMAGE & CAPTION ONLY IF OPTION 1 IS SELECTED ---
                         if (userChoice === "1") {
+                            // Default Caption (Firebase එකේ නැත්නම් වැටෙන එක)
                             let finalCaptionText = `> ꜱᴏɴɢ ᴜᴘʟᴏᴀᴅᴇᴅ ʙʏ ᴛʜᴇ ᴏᴡɴᴇʀ : Gavishka Manidu
 
 *☘️🎶 Title: ${result.title}*
 
 ❐ *🎭 Vɪᴇᴡꜱ : ${data.views}*
-❐ *⏱️ Dᴜʀᴀᴛɪᴏɴ : ${data.timestamp}*
+❐ *⏱️ Dᴜʀᴀᴛɪᴏﻥ : ${data.timestamp}*
 ❐ *📅 Rᴇʟᴇᴀꜱᴇ Dᴀᴛᴇ : ${data.ago}*
 
 *0:00 ─〇───── ${data.timestamp} ⏳*
@@ -154,23 +158,21 @@ async (conn, mek, m, { from, args, reply, isOwner }) => {
 *_Mind Relax Song Use headphones for_*
 *_best experience 🎧🙇_*`;
 
-                            const captionFilePath = path.join(__dirname, 'csong_caption.json');
-                            
+                            // Firebase එකෙන් අදාළ User ගේ Custom Caption එක කියවීම
                             try {
-                                if (fs.existsSync(captionFilePath)) {
-                                    const savedData = JSON.parse(fs.readFileSync(captionFilePath, 'utf-8'));
-                                    // කමාන්ඩ් එක පාවිච්චි කරන යූසර්ට (originalSender) අදාළව Caption එකක් තියෙනවද බලනවා
-                                    if (savedData && savedData[originalSender]) {
-                                        finalCaptionText = savedData[originalSender]
-                                            .replace(/{title}/g, result.title || data.title)
-                                            .replace(/{views}/g, data.views)
-                                            .replace(/{duration}/g, data.timestamp)
-                                            .replace(/{ago}/g, data.ago)
-                                            .replace(/{channelname}/g, channelname);
-                                    }
+                                const safeJid = originalSender.replace(/[^a-zA-Z0-9]/g, '_');
+                                const { data: fbData } = await axios.get(`${FIREBASE_DB_URL}/${safeJid}.json`);
+                                
+                                if (fbData && fbData.customCaption) {
+                                    finalCaptionText = fbData.customCaption
+                                        .replace(/{title}/g, result.title || data.title)
+                                        .replace(/{views}/g, data.views)
+                                        .replace(/{duration}/g, data.timestamp)
+                                        .replace(/{ago}/g, data.ago)
+                                        .replace(/{channelname}/g, channelname);
                                 }
                             } catch (err) {
-                                console.log("Caption read error:", err);
+                                console.log("Firebase Caption Read Error:", err);
                             }
 
                             try {  
@@ -233,7 +235,7 @@ async (conn, mek, m, { from, args, reply, isOwner }) => {
 
 cmd({
     pattern: "setcsong",
-    desc: "Set custom caption for csong (Per-User)",
+    desc: "Set custom caption for csong (Saved to Firebase)",
     category: "owner",
     filename: __filename
 },
@@ -241,31 +243,22 @@ async (conn, mek, m, { args, reply, isOwner }) => {
     
     const newCaption = args.join(" ");
     if (!newCaption) {
-        return await reply(`❌ *Caption එකක් ලබා දෙන්න.*\n\n*උදාහරණ:* \n.setcsong Title: {title}\nVɪᴇᴡꜱ : {views}\nDᴜʀᴀᴛɪᴏɴ : {duration}\n Rᴇʟᴇᴀꜱᴇ Dᴀᴛᴇ : {ago}`);
+        return await reply(`❌ *Caption එකක් ලබා දෙන්න.*\n\n*උදාහරණ:* \n.setcsong Title: {title}\nVɪᴇᴡส์ : {views}\nDᴜʀᴀᴛɪᴏɴ : {duration}\n Rᴇʟᴇᴀꜱᴇ Dᴀᴛᴇ : {ago}`);
     }
 
     try {
-        const sender = mek.key.participant || mek.key.remoteJid; // කමාන්ඩ් එක දාපු යූසර්ව හඳුනා ගැනීම
-        const captionFile = path.join(__dirname, 'csong_caption.json');
-        
-        let savedData = {};
-        if (fs.existsSync(captionFile)) {
-            try {
-                const fileContent = fs.readFileSync(captionFile, 'utf-8');
-                savedData = fileContent ? JSON.parse(fileContent) : {};
-            } catch (e) {
-                savedData = {};
-            }
-        }
+        const sender = mek.key.participant || mek.key.remoteJid; 
+        // JID එකේ තියෙන Firebase වලට තහනම් ලකුණු ඉවත් කිරීම (@, .)
+        const safeJid = sender.replace(/[^a-zA-Z0-9]/g, '_');
 
-        // යූසර්ගේ JID එක යටතේ විතරක් Caption එක සේව් කරනවා
-        savedData[sender] = newCaption;
-        
-        fs.writeFileSync(captionFile, JSON.stringify(savedData, null, 2));
-        await reply("✅ *Custom Caption එක සාර්ථකව Save කළා!*");
+        // Firebase එකට කෙලින්ම සේව් කිරීම (REST API PUT request)
+        await axios.put(`${FIREBASE_DB_URL}/${safeJid}.json`, {
+            customCaption: newCaption
+        });
+
+        await reply("✅ *Custom Caption එක Firebase Database එකට ස්ථිරවම Save කළා! දැන් Restart වුණත් මැකෙන්නේ නැහැ.*");
     } catch (e) {
-        console.error("Caption Save Error:", e);
-        await reply(`❌ *Caption එක Save කිරීමේදී දෝෂයක්!* \n\n\`\`\`${e.message}\`\`\``);
+        console.error("Firebase Save Error:", e);
+        await reply(`❌ *Caption එක Firebase වෙත Save කිරීමේදී දෝෂයක්!* \n\n\`\`\`${e.message}\`\`\``);
     }
 });
-
