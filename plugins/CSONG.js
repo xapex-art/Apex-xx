@@ -32,7 +32,7 @@ async (conn, mek, m, { from, args, reply, isOwner }) => {
         }  
 
         if (!targetJid.includes('@')) {  
-            return await reply("❌ *කරුණාකර නිවැරදි JID එකක් ලබා දෙන්න.*\n*(උදා: 123456...789@newsletter හෝ ...@g.us)*");  
+            return await reply("❌ *කරුණාකර නිවැරදි JID එකක් ලබා දෙන්න.*\n*(උදා: 123456....789@newsletter හෝ ...@g.us)*");  
         }  
 
         const search = await yts(query);  
@@ -59,7 +59,7 @@ async (conn, mek, m, { from, args, reply, isOwner }) => {
             `\`Tᴀʀɢᴇᴛ:\` ${channelname}\n\n` +
             `🌈 *කරුණාකර (Reply) අංකය ලබාදෙන්න:* \n\n` +
             `\`1️⃣ Wɪᴛʜ Cᴀᴘᴛɪᴏɴ\` (Tʜᴜʙɴᴀɪʟ + Cᴀᴘᴛɪᴏɴ + Aᴜᴅɪᴏ)\n` +
-            `\`2️⃣ Nᴏ Cᴀᴘᴛɪᴏɴ\` (Aᴜᴅɪᴏ Oɴʟʏ)`;
+            `\`2️⃣ Nᴏ Cᴀᴘᴛɪᴏɴ\` (Aᴜᴅɪᴏ Oɴʟʏ.)`;
 
         // Option Menu එක Image එකත් එක්කම යැවීම
         const sentMsg = await conn.sendMessage(from, { 
@@ -92,7 +92,7 @@ async (conn, mek, m, { from, args, reply, isOwner }) => {
                         await reply(`⏳ *Processing Option ${userChoice}... Please wait!*`);
 
                         // --- Aluth API eka saha Base Key eka ---
-                        const apiKey = "ec6c9505fa330141f4b3f458a9c72158";
+                        const apiKey = "a869fcb4f9ec52ac6ff45b17d0d98ccf";
                         const api = `https://apis.sadas.dev/api/v1/download/youtube?q=${encodeURIComponent(ytUrl)}&format=mp3&apiKey=${apiKey}`;  
                         const { data: apiRes } = await axios.get(api);  
 
