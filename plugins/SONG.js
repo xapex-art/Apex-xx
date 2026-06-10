@@ -28,13 +28,8 @@ async (conn, mek, m, {
             );
         }
 
-        // Searching reaction
-        await conn.sendMessage(from, {
-            react: {
-                text: "🔄",
-                key: mek.key
-            }
-        });
+        // Searching React
+        await conn.sendMessage(from, { react: { text: "🔄", key: mek.key } });
 
         const search = await yts(q);
         const data = search.videos[0];
@@ -61,9 +56,7 @@ async (conn, mek, m, {
 Developed by ChiraNx 🌸`;
 
         await conn.sendMessage(from, {
-            image: {
-                url: data.thumbnail
-            },
+            image: { url: data.thumbnail },
             caption: caption
         }, {
             quoted: mek
@@ -76,124 +69,101 @@ Developed by ChiraNx 🌸`;
 });
 
 
-// ================= RESPONSE HANDLER (NUMBER REPLY) =================
+// ================= RESPONSE HANDLER (REPLY SENDER) =================
 
 cmd({
     on: "body"
 },
 async (conn, mek, m, {
     from,
-    body
+    body,
+    reply
 }) => {
     try {
         if (!body) return;
 
         const text = body.trim();
 
-        // 1, 2, හෝ 3 ද කියා පරීක්ෂා කිරීම
         if (text === "1" || text === "2" || text === "3") {
 
-            // Reply කරපු message එකේ විස්තර ලබා ගැනීම
-            const quoted = mek.message?.extendedTextMessage?.contextInfo?.quotedMessage;
-            if (!quoted) return;
+            // Quoted message එක ගන්න එක ගොඩක් strong කළා
+            const quotedMsg = mek.message?.extendedTextMessage?.contextInfo?.quotedMessage;
+            
+            // Bot Framework එක අනුව caption එක එන තැන වෙනස් වෙන්න පුළුවන්, ඒ ඔක්කොම cover කළා
+            const caption = quotedMsg?.imageMessage?.caption || 
+                            m?.quoted?.text || 
+                            m?.quoted?.msg?.caption || 
+                            "";
 
-            // Image caption එකක් තියෙනවද සහ ඒක අපේම Song Downloader එකක්ද කියා බැලීම
-            const caption = quoted?.imageMessage?.caption || "";
             if (!caption.includes("SONG DOWNLOADER")) return;
 
-            // Downloading reaction
-            await conn.sendMessage(from, {
-                react: {
-                    text: "⬇️",
-                    key: mek.key
-                }
-            });
+            // Downloading React (මේක දැන් අනිවාර්යයෙන්ම එන්න ඕනේ)
+            await conn.sendMessage(from, { react: { text: "⬇️", key: mek.key } });
 
-            // Extract YouTube URL from the caption
-            const urlMatch = caption.match(/(https?:\/\/(?:www\.)?(?:youtube\.com|youtu\.be)\/[^\s]+)/gi);
-            if (!urlMatch) return;
-            const ytUrl = urlMatch[0];
+            // Caption එක ඇතුලෙන් හරියටම LINK එකයි TITLE එකයි වෙන් කරගන්නවා
+            const urlMatch = caption.match(/LINK : (https?:\/\/[^\s]+)/);
+            if (!urlMatch) {
+                return reply("❌ YouTube ලින්ක් එක හොයාගන්න බැරි වුණා.");
+            }
+            const ytUrl = urlMatch[1];
 
-            // Extract Title from the caption
-            let titleMatch = caption.match(/TITLE : (.*)/);
-            let title = titleMatch ? titleMatch[1].trim() : "Song";
+            const titleMatch = caption.match(/TITLE : (.*)/);
+            const title = titleMatch ? titleMatch[1].trim() : "Apex_Song";
 
-            // --- NEW API IMPLEMENTATION ---
+            // Sadas API එකට Call කරනවා
             const apiKey = "a869fcb4f9ec52ac6ff45b17d0d98ccf";
             const apiEndpoint = `https://apis.sadas.dev/api/v1/download/youtube?q=${encodeURIComponent(ytUrl)}&format=mp3&apiKey=${apiKey}`;
 
             const res = await axios.get(apiEndpoint);
-            
-            // Response එකෙන් download link එක හරියටම වෙන් කර ගැනීම
-            const resultData = res.data?.result || res.data?.data || res.data;
-            const dlUrl = resultData?.downloadUrl || resultData?.url || resultData?.download;
+
+            // API එකෙන් එන JSON එක මොන විදිහට ආවත් අල්ලගන්න පුළුවන් විදිහට හැදුවා
+            const dlUrl = res.data?.data?.downloadUrl || 
+                          res.data?.data?.download || 
+                          res.data?.result?.downloadUrl || 
+                          res.data?.result?.url || 
+                          res.data?.url;
 
             if (!dlUrl) {
-                return conn.sendMessage(from, {
-                    text: "❌ Download link generation failed from API."
-                }, {
-                    quoted: mek
-                });
+                return reply("❌ API එකෙන් Download ලින්ක් එකක් ආවේ නැහැ බන්.");
             }
 
-            // Uploading reaction
-            await conn.sendMessage(from, {
-                react: {
-                    text: "⬆️",
-                    key: mek.key
-                }
-            });
+            // Uploading React
+            await conn.sendMessage(from, { react: { text: "⬆️", key: mek.key } });
 
-            // 1️⃣ OPTION 1: AUDIO FILE
+            // OPTION 1 : AUDIO FILE
             if (text === "1") {
                 await conn.sendMessage(from, {
-                    audio: {
-                        url: dlUrl
-                    },
+                    audio: { url: dlUrl },
                     mimetype: "audio/mpeg",
                     ptt: false
-                }, {
-                    quoted: mek
-                });
+                }, { quoted: mek });
             }
 
-            // 2️⃣ OPTION 2: DOCUMENT FILE
+            // OPTION 2 : DOCUMENT FILE
             else if (text === "2") {
                 await conn.sendMessage(from, {
-                    document: {
-                        url: dlUrl
-                    },
+                    document: { url: dlUrl },
                     mimetype: "audio/mpeg",
                     fileName: `${title}.mp3`
-                }, {
-                    quoted: mek
-                });
+                }, { quoted: mek });
             }
 
-            // 3️⃣ OPTION 3: VOICE NOTE (PTT)
+            // OPTION 3 : VOICE NOTE (PTT)
             else if (text === "3") {
                 await conn.sendMessage(from, {
-                    audio: {
-                        url: dlUrl
-                    },
+                    audio: { url: dlUrl },
                     mimetype: "audio/mpeg",
                     ptt: true
-                }, {
-                    quoted: mek
-                });
+                }, { quoted: mek });
             }
 
-            // Success reaction
-            await conn.sendMessage(from, {
-                react: {
-                    text: "✅",
-                    key: mek.key
-                }
-            });
+            // Success React
+            await conn.sendMessage(from, { react: { text: "✅", key: mek.key } });
         }
 
     } catch (e) {
         console.log(e);
-        // Error එකක් ආවොත් React එක අයින් කිරීමට හෝ පෙන්වීමට හැක
+        // Error එකක් ආවොත් මොකක්ද අවුල කියලා අපිටම බලාගන්න Error Reply එකක් දැම්මා
+        if (reply) reply(`❌ අඩෝ අවුලක් ගියා බන්: ${e.message}`);
     }
 });
