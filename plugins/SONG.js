@@ -2,19 +2,25 @@ const { cmd } = require('../command');
 const yts = require('yt-search');
 const axios = require('axios');
 
-// ================= MAIN COMMAND (.song) =================
+// ================= 1. SONG COMMAND (.song) =================
 cmd({
     pattern: "song",
-    react: "🎧",
-    desc: "Download songs from YouTube",
+    desc: "Download songs",
     category: "download",
-    use: '.song <name>',
+    react: "🎧",
     filename: __filename
 },
 async (conn, mek, m, { from, q, reply }) => {
     try {
         if (!q) {
-            return reply("❗ කරුණාකර සිංදුවක නමක් දෙන්න.\n(උදා: .song manike mage hithe)");
+            return reply(
+`━━━━━━━━━━━━━━━━━━━
+
+│ Example
+│ • .song waiwara
+
+━━━━━━━━━━━━━━━━━━━`
+            );
         }
 
         // Searching React
@@ -22,106 +28,131 @@ async (conn, mek, m, { from, q, reply }) => {
 
         const search = await yts(q);
         const data = search.videos[0];
-        
-        if (!data) return reply("❌ Song not found!");
 
-        // New Clean Caption Structure
-        let desc = `🎵 *SONG DOWNLOADER* 🎵\n\n> 📌 *Title:* ${data.title}\n> ⏱️ *Duration:* ${data.timestamp}\n> 👁️ *Views:* ${data.views}\n> 📅 *Uploaded:* ${data.ago}\n> 🔗 *Link:* ${data.url}\n\n*Reply this message with the number:*\n1️⃣ Audio File\n2️⃣ Document File\n3️⃣ Voice Note (PTT)\n\n_🌸 Developed by ChiraNx_`;
+        if (!data) {
+            return reply("❌ Song not found!");
+        }
 
-        // Send Image with Caption
+        let caption = `🎵 *SONG DOWNLOADER* 🎵\n\n━━━━━━━━━━━━━━━━━━━\n│ • TITLE : ${data.title}\n│ • DATE : ${data.ago}\n│ • DURATION : ${data.timestamp}\n│ • VIEWS : ${data.views}\n│ • LINK : ${data.url}\n━━━━━━━━━━━━━━━━━━━\n\n1️⃣ AUDIO FILE\n2️⃣ DOCUMENT FILE\n3️⃣ VOICE NOTE\n\nDeveloped by ChiraNx 🌸`;
+
         await conn.sendMessage(from, {
             image: { url: data.thumbnail },
-            caption: desc
+            caption: caption
         }, { quoted: mek });
 
     } catch (e) {
         console.log(e);
-        reply(`❌ Error: ${e.message}`);
+        reply(`❌ Error : ${e.message}`);
     }
 });
 
-// ================= REPLY LISTENER (1, 2, 3) =================
+
+// ================= 2. NUMBER REPLY HANDLER (1, 2, 3) =================
 cmd({
     on: "body"
 },
 async (conn, mek, m, { from, body, reply }) => {
     try {
-        if (!body) return;
-        const text = body.trim();
+        // --- BULLETPROOF TEXT EXTRACTION ---
+        // Framework එකෙන් body එක නැති වුණත් Raw Message එකෙන් Text එක ගන්නවා
+        let rawInput = body || "";
+        if (mek.message?.extendedTextMessage?.text) {
+            rawInput = mek.message.extendedTextMessage.text;
+        } else if (mek.message?.conversation) {
+            rawInput = mek.message.conversation;
+        } else if (m?.text) {
+            rawInput = m.text;
+        }
 
-        // 1, 2, හෝ 3 විතරක් අල්ලගන්නවා
+        const text = rawInput.trim();
+
+        // 1, 2, හෝ 3 ද කියා පරීක්ෂා කිරීම
         if (text === "1" || text === "2" || text === "3") {
-            
-            // === BULLETPROOF QUOTED MESSAGE EXTRACTION ===
-            // මේකෙන් අනිවාර්යයෙන්ම reply කරපු එක අල්ලගන්නවා
-            const quotedMessage = mek.message?.extendedTextMessage?.contextInfo?.quotedMessage;
-            if (!quotedMessage) return;
 
-            // Caption එක තියෙන තැන කොහේ වුණත් හොයාගන්නවා
-            const caption = quotedMessage?.imageMessage?.caption || 
-                            quotedMessage?.conversation || 
-                            quotedMessage?.extendedTextMessage?.text || 
-                            m.quoted?.text || 
-                            m.quoted?.caption || 
-                            "";
+            // --- BULLETPROOF QUOTED EXTRACTION ---
+            const quoted = mek.message?.extendedTextMessage?.contextInfo?.quotedMessage || m?.quoted;
+            if (!quoted) return;
 
-            // අපේ Song Downloader මැසේජ් එකද කියලා චෙක් කරනවා
-            if (!caption.includes("SONG DOWNLOADER")) return;
+            // Caption එක තියෙන හැම තැනක්ම පීරලා ගන්නවා
+            let caption = "";
+            if (quoted.imageMessage?.caption) caption = quoted.imageMessage.caption;
+            else if (quoted.extendedTextMessage?.text) caption = quoted.extendedTextMessage.text;
+            else if (quoted.conversation) caption = quoted.conversation;
+            else if (m?.quoted?.caption) caption = m.quoted.caption;
+            else if (m?.quoted?.text) caption = m.quoted.text;
 
-            // Reply එක අහුවුණා කියන්න React කරනවා
+            // අපේ Song Downloader මැසේජ් එකටමද Reply කරලා තියෙන්නේ කියලා බලනවා
+            if (!caption || !caption.includes("SONG DOWNLOADER")) return;
+
+            // Reply එක අහුවුණ ගමන් අනිවාර්යයෙන්ම React වෙනවා දැන්
             await conn.sendMessage(from, { react: { text: "⬇️", key: mek.key } });
 
-            // Caption එකෙන් Regex දාලා අනිවාර්යයෙන් ලින්ක් එක වෙන් කරනවා
-            const urlMatch = caption.match(/(https?:\/\/(?:www\.)?(?:youtube\.com|youtu\.be)\/[^\s]+)/);
-            if (!urlMatch) return reply("❌ Caption එකේ ලින්ක් එක හොයාගන්න බැරි වුණා.");
-            
+            // Caption එක ඇතුලෙන් YouTube Link එක වෙන් කර ගැනීම
+            const urlMatch = caption.match(/(https?:\/\/(?:www\.)?(?:youtube\.com|youtu\.be)\/[^\s]+)/i);
+            if (!urlMatch) {
+                return reply("❌ Caption එකෙන් YouTube URL එක හොයාගන්න බැරි වුණා.");
+            }
             const ytUrl = urlMatch[0];
 
-            // Document නමට දාන්න Title එක ගන්නවා
-            const titleMatch = caption.match(/\*Title:\* (.*)/);
-            const title = titleMatch ? titleMatch[1].trim() : "Apex_Song";
+            // Title එක වෙන් කර ගැනීම
+            let titleMatch = caption.match(/TITLE\s*:\s*(.*)/i);
+            let title = titleMatch ? titleMatch[1].trim() : "Song";
 
-            // === API CALL (SADAS API) ===
+            // --- API CALL (SADAS API) ---
             const apiKey = "a869fcb4f9ec52ac6ff45b17d0d98ccf";
             const apiEndpoint = `https://apis.sadas.dev/api/v1/download/youtube?q=${encodeURIComponent(ytUrl)}&format=mp3&apiKey=${apiKey}`;
 
             const res = await axios.get(apiEndpoint);
 
-            // API Response එකේ Data අල්ලගන්නවා (ඕනෑම JSON හැඩයකට වැඩ)
-            const dlUrl = res.data?.data?.downloadUrl || 
-                          res.data?.data?.url || 
-                          res.data?.result?.downloadUrl || 
-                          res.data?.result?.url || 
-                          res.data?.downloadUrl;
+            // --- BULLETPROOF URL EXTRACTOR ---
+            // API Response එකේ කොතන ලින්ක් එක තිබ්බත් හොයලා දෙන සිරාම Function එකක්
+            function findDownloadUrl(obj) {
+                if (typeof obj === 'string' && (obj.startsWith('http://') || obj.startsWith('https://'))) {
+                    return obj;
+                }
+                if (typeof obj !== 'object' || obj === null) return null;
+                for (let key in obj) {
+                    let found = findDownloadUrl(obj[key]);
+                    if (found) return found;
+                }
+                return null;
+            }
+
+            let dlUrl = res.data?.result?.downloadUrl || 
+                        res.data?.data?.downloadUrl || 
+                        res.data?.url || 
+                        findDownloadUrl(res.data);
 
             if (!dlUrl) {
                 await conn.sendMessage(from, { react: { text: "❌", key: mek.key } });
-                return reply("❌ API එකෙන් සින්දුව ඩවුන්ලෝඩ් ලින්ක් එක ආවේ නැහැ.");
+                return reply("❌ API එකෙන් සින්දුවේ Download ලින්ක් එක ආවේ නැහැ බන්.");
             }
 
             // Uploading React
             await conn.sendMessage(from, { react: { text: "⬆️", key: mek.key } });
 
-            // === SEND MEDIA BASED ON USER CHOICE ===
+            // --- SEND MEDIA BASED ON USER CHOICE ---
+            
+            // 1️⃣ OPTION 1 : AUDIO FILE
             if (text === "1") {
-                // Audio File
                 await conn.sendMessage(from, {
                     audio: { url: dlUrl },
                     mimetype: "audio/mpeg",
                     ptt: false
                 }, { quoted: mek });
             } 
+            
+            // 2️⃣ OPTION 2 : DOCUMENT FILE
             else if (text === "2") {
-                // Document File
                 await conn.sendMessage(from, {
                     document: { url: dlUrl },
                     mimetype: "audio/mpeg",
-                    fileName: `${title}.mp3`,
-                    caption: `🎵 ${title}`
+                    fileName: `${title}.mp3`
                 }, { quoted: mek });
             } 
+            
+            // 3️⃣ OPTION 3 : VOICE NOTE (PTT)
             else if (text === "3") {
-                // Voice Note (PTT)
                 await conn.sendMessage(from, {
                     audio: { url: dlUrl },
                     mimetype: "audio/mpeg",
@@ -134,7 +165,7 @@ async (conn, mek, m, { from, body, reply }) => {
         }
 
     } catch (e) {
-        console.log(e);
+        console.error(e);
         reply(`❌ Reply Error: ${e.message}`);
     }
 });
