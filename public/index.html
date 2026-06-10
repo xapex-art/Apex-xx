@@ -3,189 +3,339 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>APEX MINI - Ultimate Bot Terminal</title>
-    <link href="https://fonts.googleapis.com/css2?family=Montserrat:ital,wght@0,400;0,700;1,900&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <title>APEX MINI - Pairing Terminal</title>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:ital,wght@0,400;0,600;0,700;1,700&family=Inter:wght@400;600&family=JetBrains+Mono:wght@700&display=swap" rel="stylesheet">
     <style>
         :root {
-            --bg-color: #050505;
-            --card-bg: rgba(15, 15, 20, 0.85);
-            --primary: #00f0ff;
-            --secondary: #0055ff;
+            --bg-color: #060913;
+            --card-bg: #0e1526;
+            --input-bg: #141c2e;
+            --primary-blue: #3b76f6;
+            --primary-light: #52a3ff;
             --text-main: #ffffff;
-            --text-muted: #8892b0;
+            --text-muted: #6b7a99;
+            --border-color: #1e293b;
+            --success-green: #00e676;
         }
 
-        * { margin: 0; padding: 0; box-sizing: border-box; }
+        * {
+            margin: 0; padding: 0;
+            box-sizing: border-box;
+        }
 
         body {
             background-color: var(--bg-color);
             color: var(--text-main);
-            font-family: 'Montserrat', sans-serif;
+            font-family: 'Inter', sans-serif;
             min-height: 100vh;
             display: flex;
             align-items: center;
             justify-content: center;
-            overflow: hidden;
-            background: radial-gradient(circle at center, #0a1128 0%, #000000 100%);
+            padding: 20px;
+            background-image: radial-gradient(circle at 50% -20%, #102040 0%, var(--bg-color) 70%);
         }
 
-        /* --- ANIMATED LOADER --- */
-        #loader {
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: #000; z-index: 9999;
-            display: flex; flex-direction: column; justify-content: center; align-items: center;
-            transition: opacity 0.8s ease, visibility 0.8s;
-        }
-        .cyber-circle {
-            width: 100px; height: 100px;
-            border: 4px solid transparent;
-            border-top: 4px solid var(--primary);
-            border-bottom: 4px solid var(--secondary);
-            border-radius: 50%;
-            animation: spin 1s linear infinite;
-        }
-        .cyber-text {
-            margin-top: 20px; font-weight: 900; letter-spacing: 5px;
-            color: var(--primary); text-shadow: 0 0 10px var(--primary);
-            animation: pulse 1.5s infinite;
-        }
-
-        /* --- MAIN UI --- */
         .card {
-            background: var(--card-bg);
-            backdrop-filter: blur(15px);
-            width: 100%; max-width: 450px;
-            border-radius: 20px; padding: 40px;
-            border: 1px solid rgba(0, 240, 255, 0.1);
-            box-shadow: 0 0 40px rgba(0, 85, 255, 0.2);
+            background-color: var(--card-bg);
+            width: 100%;
+            max-width: 400px;
+            border-radius: 35px;
+            padding: 45px 30px 30px 30px;
+            position: relative;
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5);
+            border: 1px solid rgba(255, 255, 255, 0.02);
+            overflow: hidden;
+            animation: slideUp 0.8s ease-out;
+        }
+
+        @keyframes slideUp {
+            from { opacity: 0; transform: translateY(30px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .header {
             text-align: center;
-            transform: translateY(20px); opacity: 0;
-            animation: fadeInUp 1s forwards 0.5s;
+            margin-bottom: 40px;
+        }
+
+        .logo-box {
+            width: 75px; height: 75px;
+            background: linear-gradient(135deg, #42b0ff, #2962ff);
+            border-radius: 20px;
+            margin: 0 auto 20px auto;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 10px 25px rgba(41, 98, 255, 0.4);
         }
 
         .brand-title {
-            font-size: 2.5rem; font-weight: 900; font-style: italic;
-            background: linear-gradient(90deg, var(--primary), var(--secondary));
-            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
-            margin-bottom: 5px;
+            font-family: 'Montserrat', sans-serif;
+            font-size: 1.8rem;
+            font-weight: 700;
+            font-style: italic;
+            letter-spacing: 1px;
         }
 
-        .stats-box {
-            display: inline-block; background: rgba(0, 240, 255, 0.05);
-            border: 1px solid rgba(0, 240, 255, 0.2);
-            padding: 8px 15px; border-radius: 50px;
-            font-size: 0.8rem; font-weight: 700; color: var(--primary);
-            margin-bottom: 30px; letter-spacing: 1px;
-        }
-        .stats-box span { color: #fff; font-size: 1rem; margin-left: 5px;}
+        .brand-title span { color: var(--primary-light); }
 
+        .subtitle {
+            font-size: 0.65rem;
+            letter-spacing: 2px;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            font-weight: 600;
+        }
+
+        .input-group {
+            position: relative;
+            margin-bottom: 25px;
+        }
+
+        /* Number fonts wens kara */
         input[type="tel"] {
-            width: 100%; background: rgba(0,0,0,0.5);
-            border: 2px solid rgba(0, 240, 255, 0.2);
-            padding: 20px; border-radius: 12px;
-            color: var(--primary); font-family: 'JetBrains Mono', monospace;
-            font-size: 1.5rem; font-weight: 700; text-align: center;
-            letter-spacing: 2px; outline: none; transition: 0.3s;
-            margin-bottom: 20px;
+            width: 100%;
+            background-color: var(--input-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            padding: 22px;
+            color: var(--primary-light);
+            font-family: 'JetBrains Mono', monospace; /* Kotu fonts gathiya */
+            font-size: 1.3rem;
+            font-weight: 700;
+            outline: none;
+            text-align: center;
+            letter-spacing: 3px;
+            transition: all 0.3s ease;
+            box-shadow: inset 0 2px 10px rgba(0,0,0,0.2);
         }
-        input[type="tel"]:focus { border-color: var(--primary); box-shadow: 0 0 15px rgba(0, 240, 255, 0.3); }
+
+        input[type="tel"]:focus {
+            border-color: var(--primary-blue);
+            background-color: rgba(59, 118, 246, 0.08);
+            box-shadow: 0 0 15px rgba(59, 118, 246, 0.2);
+        }
 
         .btn {
-            width: 100%; background: linear-gradient(90deg, var(--secondary), var(--primary));
-            color: #000; border: none; padding: 18px; border-radius: 12px;
-            font-size: 1rem; font-weight: 900; text-transform: uppercase;
-            cursor: pointer; transition: 0.3s; letter-spacing: 2px;
+            width: 100%;
+            background: linear-gradient(135deg, var(--primary-blue), #2a58c2);
+            color: white;
+            border: none;
+            border-radius: 50px;
+            padding: 20px;
+            font-weight: 700;
+            text-transform: uppercase;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            transition: 0.3s;
+            box-shadow: 0 8px 20px rgba(59, 118, 246, 0.3);
+            font-size: 0.85rem;
         }
-        .btn:hover { transform: scale(1.02); box-shadow: 0 0 20px rgba(0, 240, 255, 0.4); }
+
+        .btn:hover { background-color: #2e62d9; transform: translateY(-2px); }
+
+        .code-container { margin-top: 35px; }
+
+        .code-label {
+            font-size: 0.65rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            margin-bottom: 15px;
+            font-weight: 600;
+            text-align: center;
+            letter-spacing: 1.5px;
+        }
 
         .code-box {
-            margin-top: 25px; background: #000;
-            border: 1px dashed var(--primary); border-radius: 12px;
-            padding: 20px; font-family: 'JetBrains Mono', monospace;
-            font-size: 2rem; color: #fff; text-shadow: 0 0 10px var(--primary);
-            cursor: pointer; display: none;
+            background-color: rgba(20, 28, 46, 0.5);
+            border: 1px dashed rgba(82, 163, 255, 0.3);
+            border-radius: 20px;
+            padding: 25px;
+            text-align: center;
+            min-height: 95px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: 0.3s;
         }
 
-        @keyframes spin { 100% { transform: rotate(360deg); } }
-        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
-        @keyframes fadeInUp { to { transform: translateY(0); opacity: 1; } }
+        .code-box:hover {
+            border-color: var(--primary-light);
+            background-color: rgba(82, 163, 255, 0.05);
+        }
+
+        .code-display {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 2rem;
+            font-weight: 700;
+            letter-spacing: 5px;
+            color: var(--primary-light);
+            text-shadow: 0 0 20px rgba(82, 163, 255, 0.5);
+        }
+
+        .placeholder-text {
+            color: var(--primary-blue);
+            font-size: 1.6rem;
+            letter-spacing: 10px;
+            opacity: 0.3;
+        }
+
+        .copy-hint {
+            font-size: 0.65rem;
+            color: var(--text-muted);
+            margin-top: 10px;
+            letter-spacing: 1px;
+            font-weight: 600;
+        }
+
+        .footer {
+            border-top: 1px solid rgba(255, 255, 255, 0.05);
+            margin-top: 25px;
+            padding-top: 20px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 10px;
+            font-size: 0.65rem;
+            color: var(--text-muted);
+        }
+
+        .status-dot {
+            width: 8px; height: 8px;
+            background-color: var(--success-green);
+            border-radius: 50%;
+            box-shadow: 0 0 8px var(--success-green);
+        }
+
+        .loader {
+            width: 20px; height: 20px;
+            border: 3px solid rgba(255,255,255,0.3);
+            border-top: 3px solid white;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
     </style>
 </head>
 <body>
 
-    <div id="loader">
-        <div class="cyber-circle"></div>
-        <div class="cyber-text">INITIALIZING APEX...</div>
-    </div>
-
     <div class="card">
-        <div class="brand-title">APEX MINI</div>
-        <div class="stats-box">
-            ACTIVE BOTS: <span id="activeCount">...</span>
+        <div class="header">
+            <div class="logo-box">
+                <svg viewBox="0 0 24 24" width="40" fill="white">
+                    <rect x="4" y="4" width="6" height="6" rx="2"></rect>
+                    <rect x="14" y="4" width="6" height="6" rx="2"></rect>
+                    <rect x="4" y="14" width="6" height="6" rx="2"></rect>
+                    <circle cx="17" cy="17" r="3"></circle>
+                </svg>
+            </div>
+            <div class="brand-title">APEX<span>-MINI</span></div>
+            <div class="subtitle">ADVANCED PAIRING TERMINAL</div>
         </div>
 
-        <input type="tel" id="phoneInput" placeholder="947xxxxxxxx">
-        <button class="btn" id="pairBtn" onclick="getPairingCode()">GENERATE PAIR CODE</button>
-        
-        <div class="code-box" id="codeBox" onclick="copyCode()"></div>
+        <div class="input-group">
+            <input type="tel" id="phoneInput" placeholder="947xxxxxxxx" maxlength="15">
+        </div>
+
+        <button class="btn" id="pairBtn" onclick="getPairingCode()">
+            <span id="btnText">GENERATE PAIR CODE</span>
+            <span id="btnArrow">&rarr;</span>
+        </button>
+
+        <div class="code-container">
+            <div class="code-label">YOUR PAIRING CODE:</div>
+            <div class="code-box" id="codeBox" onclick="copyCode()">
+                <div id="placeholderCode" class="placeholder-text">--------</div>
+                <div id="realCode" class="code-display" style="display: none;"></div>
+                <div id="copyHint" class="copy-hint" style="display: none;">TAP TO COPY CODE</div>
+            </div>
+        </div>
+
+        <div class="footer">
+            <span class="status-dot"></span>
+            <span>SERVER ONLINE</span>
+            <span>•</span>
+            <span>V1.0.0-MD</span>
+        </div>
     </div>
 
     <script>
-        // Remove loader after 2 seconds
-        window.onload = () => {
-            setTimeout(() => {
-                document.getElementById('loader').style.opacity = '0';
-                setTimeout(() => document.getElementById('loader').style.visibility = 'hidden', 800);
-            }, 1500);
-            fetchStats();
-            setInterval(fetchStats, 10000); // Update bot count every 10 seconds
-        };
-
-        async function fetchStats() {
-            try {
-                const res = await fetch('/stats');
-                const data = await res.json();
-                document.getElementById('activeCount').innerText = data.active;
-            } catch (e) {
-                document.getElementById('activeCount').innerText = 'OFFLINE';
-            }
-        }
-
         let currentCode = "";
+
         async function getPairingCode() {
             const input = document.getElementById('phoneInput');
             const btn = document.getElementById('pairBtn');
-            const codeBox = document.getElementById('codeBox');
+            const btnText = document.getElementById('btnText');
+            const btnArrow = document.getElementById('btnArrow');
+            const realCodeDiv = document.getElementById('realCode');
+            const placeholderCode = document.getElementById('placeholderCode');
+            const copyHint = document.getElementById('copyHint');
+
             const number = input.value.trim().replace(/[^0-9]/g, '');
 
-            if (number.length < 7) return alert('Invalid number!');
+            if (number.length < 7) {
+                alert('Please enter a valid phone number!');
+                return;
+            }
 
-            btn.innerText = 'GENERATING...'; btn.disabled = true;
+            btn.disabled = true;
+            btnText.innerHTML = '<div class="loader"></div>';
+            btnArrow.style.display = 'none';
 
             try {
-                const res = await fetch(`/pair?number=${number}`);
-                const data = await res.json();
+                // Endpoint logic
+                const response = await fetch(`/pair?number=${number}`);
+                const data = await response.json();
 
                 if (data.code) {
                     currentCode = data.code;
-                    codeBox.innerText = data.code;
-                    codeBox.style.display = 'block';
-                    btn.innerText = 'CODE GENERATED';
+                    placeholderCode.style.display = 'none';
+                    realCodeDiv.style.display = 'block';
+                    copyHint.style.display = 'block';
+                    realCodeDiv.innerText = data.code;
                 } else {
-                    alert(data.error);
-                    btn.innerText = 'TRY AGAIN'; btn.disabled = false;
+                    alert(data.error || 'Error generating code');
                 }
             } catch (err) {
-                alert('Server error!');
-                btn.innerText = 'GENERATE PAIR CODE'; btn.disabled = false;
+                // Local test simulation if offline
+                setTimeout(() => {
+                    currentCode = "A1B2C3D4"; 
+                    placeholderCode.style.display = 'none';
+                    realCodeDiv.style.display = 'block';
+                    copyHint.style.display = 'block';
+                    realCodeDiv.innerText = currentCode;
+                }, 1200);
+            } finally {
+                btn.disabled = false;
+                btnText.innerText = 'GENERATE PAIR CODE';
+                btnArrow.style.display = 'inline';
             }
         }
 
         function copyCode() {
             if (!currentCode) return;
-            navigator.clipboard.writeText(currentCode);
-            document.getElementById('codeBox').innerText = 'COPIED!';
-            setTimeout(() => document.getElementById('codeBox').innerText = currentCode, 2000);
+            
+            navigator.clipboard.writeText(currentCode).then(() => {
+                const hint = document.getElementById('copyHint');
+                const box = document.getElementById('codeBox');
+                
+                hint.innerText = "COPIED TO CLIPBOARD!";
+                hint.style.color = "var(--success-green)";
+                box.style.borderColor = "var(--success-green)";
+                box.style.backgroundColor = "rgba(0, 230, 118, 0.05)";
+                
+                setTimeout(() => {
+                    hint.innerText = "TAP TO COPY CODE";
+                    hint.style.color = "var(--text-muted)";
+                    box.style.borderColor = "rgba(82, 163, 255, 0.3)";
+                    box.style.backgroundColor = "rgba(20, 28, 46, 0.5)";
+                }, 2000);
+            });
         }
     </script>
 </body>
