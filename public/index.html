@@ -3,358 +3,189 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>APEX MINI - High-Speed Terminal</title>
-    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Rajdhani:wght@500;700&family=JetBrains+Mono:wght@500;800&display=swap" rel="stylesheet">
+    <title>APEX MINI - Ultimate Bot Terminal</title>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:ital,wght@0,400;0,700;1,900&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
     <style>
         :root {
-            --neon-blue: #00f0ff;
-            --neon-pink: #ff007f;
-            --bg-dark: #030712;
-            --panel-bg: rgba(10, 15, 30, 0.75);
-            --border-neon: rgba(0, 240, 255, 0.2);
-            --text-white: #f3f4f6;
+            --bg-color: #050505;
+            --card-bg: rgba(15, 15, 20, 0.85);
+            --primary: #00f0ff;
+            --secondary: #0055ff;
+            --text-main: #ffffff;
+            --text-muted: #8892b0;
         }
 
         * { margin: 0; padding: 0; box-sizing: border-box; }
 
         body {
-            background-color: var(--bg-dark);
-            color: var(--text-white);
-            font-family: 'Rajdhani', sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            font-family: 'Montserrat', sans-serif;
             min-height: 100vh;
-            overflow-x: hidden;
             display: flex;
             align-items: center;
             justify-content: center;
-            background-image: 
-                radial-gradient(circle at 10% 20%, rgba(0, 240, 255, 0.08) 0%, transparent 40%),
-                radial-gradient(circle at 90% 80%, rgba(255, 0, 127, 0.06) 0%, transparent 40%);
+            overflow: hidden;
+            background: radial-gradient(circle at center, #0a1128 0%, #000000 100%);
         }
 
-        /* ================= PREMIUM ANIME INTRO LOADER SCREEN ================= */
-        #intro-loader {
-            position: fixed;
-            top: 0; left: 0; width: 100%; height: 100%;
-            background-color: #02040a;
-            z-index: 9999;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            transition: opacity 0.8s cubic-bezier(0.77, 0, 0.175, 1), visibility 0.8s;
+        /* --- ANIMATED LOADER --- */
+        #loader {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: #000; z-index: 9999;
+            display: flex; flex-direction: column; justify-content: center; align-items: center;
+            transition: opacity 0.8s ease, visibility 0.8s;
         }
-
-        .cyber-ring {
-            width: 120px; height: 120px;
-            border: 4px dashed var(--neon-blue);
+        .cyber-circle {
+            width: 100px; height: 100px;
+            border: 4px solid transparent;
+            border-top: 4px solid var(--primary);
+            border-bottom: 4px solid var(--secondary);
             border-radius: 50%;
-            animation: spinRing 3s linear infinite;
-            position: relative;
-            box-shadow: 0 0 25px rgba(0, 240, 255, 0.3);
+            animation: spin 1s linear infinite;
+        }
+        .cyber-text {
+            margin-top: 20px; font-weight: 900; letter-spacing: 5px;
+            color: var(--primary); text-shadow: 0 0 10px var(--primary);
+            animation: pulse 1.5s infinite;
         }
 
-        .cyber-ring::after {
-            content: '';
-            position: absolute;
-            top: 10px; left: 10px; right: 10px; bottom: 10px;
-            border: 2px dotted var(--neon-pink);
-            border-radius: 50%;
-            animation: spinRingBack 1.5s linear infinite;
+        /* --- MAIN UI --- */
+        .card {
+            background: var(--card-bg);
+            backdrop-filter: blur(15px);
+            width: 100%; max-width: 450px;
+            border-radius: 20px; padding: 40px;
+            border: 1px solid rgba(0, 240, 255, 0.1);
+            box-shadow: 0 0 40px rgba(0, 85, 255, 0.2);
+            text-align: center;
+            transform: translateY(20px); opacity: 0;
+            animation: fadeInUp 1s forwards 0.5s;
         }
 
-        @keyframes spinRing {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-        @keyframes spinRingBack {
-            0% { transform: rotate(360deg); }
-            100% { transform: rotate(0deg); }
+        .brand-title {
+            font-size: 2.5rem; font-weight: 900; font-style: italic;
+            background: linear-gradient(90deg, var(--primary), var(--secondary));
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+            margin-bottom: 5px;
         }
 
-        .loader-text {
-            font-family: 'Orbitron', sans-serif;
-            font-size: 1.5rem;
-            font-weight: 900;
-            letter-spacing: 6px;
-            margin-top: 30px;
-            background: linear-gradient(90deg, var(--neon-blue), var(--neon-pink));
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            animation: pulseText 1.5s ease-in-out infinite;
-        }
-
-        @keyframes pulseText {
-            0%, 100% { opacity: 0.4; }
-            50% { opacity: 1; }
-        }
-
-        /* ================= MAIN INTERFACE DASHBOARD ================= */
-        .dashboard-container {
-            width: 100%;
-            max-width: 440px;
-            padding: 20px;
-            opacity: 0;
-            transform: scale(0.95);
-            transition: all 0.8s cubic-bezier(0.19, 1, 0.22, 1);
-        }
-
-        .dashboard-container.reveal {
-            opacity: 1;
-            transform: scale(1);
-        }
-
-        .main-card {
-            background: var(--panel-bg);
-            backdrop-filter: blur(20px);
-            border: 1px solid var(--border-neon);
-            border-radius: 24px;
-            padding: 40px 30px;
-            box-shadow: 0 30px 70px rgba(0, 0, 0, 0.8), inset 0 1px 0 rgba(255,255,255,0.05);
-            position: relative;
-        }
-
-        .main-card::before {
-            content: '';
-            position: absolute;
-            top: 0; left: 0; width: 100%; height: 4px;
-            background: linear-gradient(90deg, var(--neon-blue), var(--neon-pink));
-            border-radius: 24px 24px 0 0;
-        }
-
-        .header-section { text-align: center; margin-bottom: 35px; }
-
-        .logo-glow {
-            font-family: 'Orbitron', sans-serif;
-            font-size: 2.3rem;
-            font-weight: 900;
-            letter-spacing: 2px;
-            text-shadow: 0 0 15px rgba(0, 240, 255, 0.6);
-        }
-        .logo-glow span { color: var(--neon-pink); text-shadow: 0 0 15px rgba(ff, 0, 127, 0.6); }
-
-        .sub-tag {
-            font-family: 'JetBrains Mono', monospace;
-            font-size: 0.7rem;
-            color: #6b7280;
-            letter-spacing: 3px;
-            margin-top: 5px;
-            text-transform: uppercase;
-        }
-
-        /* Live Monitor Row */
-        .live-counter-badge {
-            background: rgba(0, 240, 255, 0.05);
+        .stats-box {
+            display: inline-block; background: rgba(0, 240, 255, 0.05);
             border: 1px solid rgba(0, 240, 255, 0.2);
-            border-radius: 12px;
-            padding: 12px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 30px;
+            padding: 8px 15px; border-radius: 50px;
+            font-size: 0.8rem; font-weight: 700; color: var(--primary);
+            margin-bottom: 30px; letter-spacing: 1px;
         }
-        .counter-label { font-size: 0.85rem; color: #9ca3af; letter-spacing: 1px; }
-        .counter-value {
-            font-family: 'Orbitron', sans-serif;
-            font-size: 1.2rem;
-            color: var(--neon-blue);
-            font-weight: 700;
-        }
+        .stats-box span { color: #fff; font-size: 1rem; margin-left: 5px;}
 
-        /* Inputs and Interactive UI elements */
-        .input-wrapper { position: relative; margin-bottom: 25px; }
-        
         input[type="tel"] {
-            width: 100%;
-            background: rgba(5, 8, 16, 0.8);
-            border: 1px solid rgba(255,255,255,0.1);
-            border-radius: 14px;
-            padding: 18px;
-            color: #fff;
-            font-family: 'JetBrains Mono', monospace;
-            font-size: 1.2rem;
-            font-weight: 700;
-            text-align: center;
-            letter-spacing: 2px;
-            outline: none;
-            transition: 0.3s;
+            width: 100%; background: rgba(0,0,0,0.5);
+            border: 2px solid rgba(0, 240, 255, 0.2);
+            padding: 20px; border-radius: 12px;
+            color: var(--primary); font-family: 'JetBrains Mono', monospace;
+            font-size: 1.5rem; font-weight: 700; text-align: center;
+            letter-spacing: 2px; outline: none; transition: 0.3s;
+            margin-bottom: 20px;
         }
-        input[type="tel"]:focus {
-            border-color: var(--neon-blue);
-            box-shadow: 0 0 15px rgba(0, 240, 255, 0.25);
+        input[type="tel"]:focus { border-color: var(--primary); box-shadow: 0 0 15px rgba(0, 240, 255, 0.3); }
+
+        .btn {
+            width: 100%; background: linear-gradient(90deg, var(--secondary), var(--primary));
+            color: #000; border: none; padding: 18px; border-radius: 12px;
+            font-size: 1rem; font-weight: 900; text-transform: uppercase;
+            cursor: pointer; transition: 0.3s; letter-spacing: 2px;
+        }
+        .btn:hover { transform: scale(1.02); box-shadow: 0 0 20px rgba(0, 240, 255, 0.4); }
+
+        .code-box {
+            margin-top: 25px; background: #000;
+            border: 1px dashed var(--primary); border-radius: 12px;
+            padding: 20px; font-family: 'JetBrains Mono', monospace;
+            font-size: 2rem; color: #fff; text-shadow: 0 0 10px var(--primary);
+            cursor: pointer; display: none;
         }
 
-        .cyber-btn {
-            width: 100%;
-            background: linear-gradient(135deg, #00b4db, #00223e);
-            border: 1px solid var(--neon-blue);
-            color: white;
-            border-radius: 14px;
-            padding: 18px;
-            font-family: 'Orbitron', sans-serif;
-            font-size: 0.9rem;
-            font-weight: 700;
-            letter-spacing: 2px;
-            cursor: pointer;
-            transition: all 0.4s;
-            box-shadow: 0 10px 25px rgba(0, 240, 255, 0.2);
-        }
-        .cyber-btn:hover {
-            background: linear-gradient(135deg, var(--neon-pink), #400020);
-            border-color: var(--neon-pink);
-            box-shadow: 0 10px 25px rgba(255, 0, 127, 0.3);
-            transform: translateY(-2px);
-        }
-
-        .output-zone { margin-top: 30px; }
-        .terminal-box {
-            background: #020408;
-            border: 1px dashed rgba(255,255,255,0.1);
-            border-radius: 14px;
-            padding: 25px;
-            text-align: center;
-            min-height: 90px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            cursor: pointer;
-            transition: 0.3s;
-        }
-        .code-txt {
-            font-family: 'JetBrains Mono', monospace;
-            font-size: 1.8rem;
-            font-weight: 800;
-            color: var(--neon-blue);
-            letter-spacing: 4px;
-        }
-
-        .hint { font-size: 0.7rem; color: #4b5563; margin-top: 8px; text-align: center; letter-spacing: 1px; }
-
-        .loader-dots {
-            width: 24px; height: 24px;
-            border: 3px solid transparent;
-            border-top: 3px solid #fff;
-            border-radius: 50%;
-            animation: spin 0.6s linear infinite;
-        }
-        @keyframes spin { to { transform: rotate(360deg); } }
+        @keyframes spin { 100% { transform: rotate(360deg); } }
+        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+        @keyframes fadeInUp { to { transform: translateY(0); opacity: 1; } }
     </style>
 </head>
 <body>
 
-    <div id="intro-loader">
-        <div class="cyber-ring"></div>
-        <div class="loader-text">APEX MINI CORE</div>
+    <div id="loader">
+        <div class="cyber-circle"></div>
+        <div class="cyber-text">INITIALIZING APEX...</div>
     </div>
 
-    <div class="dashboard-container" id="dash">
-        <div class="main-card">
-            <div class="header-section">
-                <div class="logo-glow">APEX<span>MINI</span></div>
-                <div class="sub-tag">Automated Synchronization Node</div>
-            </div>
-
-            <div class="live-counter-badge">
-                <span class="counter-label">🌐 ACTIVE TERMINAL CLUSTERS</span>
-                <span class="counter-value" id="activeCount">00</span>
-            </div>
-
-            <div class="input-wrapper">
-                <input type="tel" id="phoneNumber" placeholder="947xxxxxxxx" maxlength="15">
-            </div>
-
-            <button class="cyber-btn" id="actionBtn" onclick="triggerPairing()">INITIALIZE PAIR LINK</button>
-
-            <div class="output-zone">
-                <div class="terminal-box" id="termBox" onclick="copyClipboard()">
-                    <div id="visualCode" class="code-txt" style="opacity: 0.25;">--------</div>
-                </div>
-                <div class="hint" id="hintLabel">ENTER PHONE NUMBER WITH COUNTRY CODE FIRST</div>
-            </div>
+    <div class="card">
+        <div class="brand-title">APEX MINI</div>
+        <div class="stats-box">
+            ACTIVE BOTS: <span id="activeCount">...</span>
         </div>
+
+        <input type="tel" id="phoneInput" placeholder="947xxxxxxxx">
+        <button class="btn" id="pairBtn" onclick="getPairingCode()">GENERATE PAIR CODE</button>
+        
+        <div class="code-box" id="codeBox" onclick="copyCode()"></div>
     </div>
 
     <script>
-        let fetchedPairCode = "";
-
-        // Premium Loader execution timeout delay (Simulates hardware core loading)
-        window.addEventListener('DOMContentLoaded', () => {
+        // Remove loader after 2 seconds
+        window.onload = () => {
             setTimeout(() => {
-                const loader = document.getElementById('intro-loader');
-                const dash = document.getElementById('dash');
-                loader.style.opacity = '0';
-                loader.style.visibility = 'hidden';
-                dash.classList.add('reveal');
-            }, 2200);
+                document.getElementById('loader').style.opacity = '0';
+                setTimeout(() => document.getElementById('loader').style.visibility = 'hidden', 800);
+            }, 1500);
+            fetchStats();
+            setInterval(fetchStats, 10000); // Update bot count every 10 seconds
+        };
 
-            // Fetch live session tracking counter setup
-            syncActiveCount();
-            setInterval(syncActiveCount, 3000); // 3 තත්පරයෙන් තත්පරයට Auto-Update වෙනවා!
-        });
-
-        async function syncActiveCount() {
+        async function fetchStats() {
             try {
-                const res = await fetch('/api/active-count');
+                const res = await fetch('/stats');
                 const data = await res.json();
-                // Dynamic incremental counter formatting
-                document.getElementById('activeCount').innerText = data.count < 10 ? '0' + data.count : data.count;
-            } catch(e) {}
+                document.getElementById('activeCount').innerText = data.active;
+            } catch (e) {
+                document.getElementById('activeCount').innerText = 'OFFLINE';
+            }
         }
 
-        async function triggerPairing() {
-            const input = document.getElementById('phoneNumber');
-            const btn = document.getElementById('actionBtn');
-            const display = document.getElementById('visualCode');
-            const hint = document.getElementById('hintLabel');
+        let currentCode = "";
+        async function getPairingCode() {
+            const input = document.getElementById('phoneInput');
+            const btn = document.getElementById('pairBtn');
+            const codeBox = document.getElementById('codeBox');
+            const number = input.value.trim().replace(/[^0-9]/g, '');
 
-            let num = input.value.trim().replace(/[^0-9]/g, '');
-            if(num.length < 8) {
-                alert('Invalid Cyber Target Sequence. Check number format.');
-                return;
-            }
+            if (number.length < 7) return alert('Invalid number!');
 
-            btn.disabled = true;
-            btn.innerHTML = '<div class="loader-dots" style="margin: 0 auto;"></div>';
-            display.style.opacity = "0.25";
-            display.innerText = "--------";
+            btn.innerText = 'GENERATING...'; btn.disabled = true;
 
             try {
-                const response = await fetch(`/pair?number=${num}`);
-                const data = await response.json();
+                const res = await fetch(`/pair?number=${number}`);
+                const data = await res.json();
 
-                if(data.code) {
-                    fetchedPairCode = data.code;
-                    display.innerText = data.code;
-                    display.style.opacity = "1";
-                    display.style.color = "var(--neon-blue)";
-                    hint.innerText = "LINK GENERATED. TAP THE BOX TO COPY ACCESS DECREE.";
-                    hint.style.color = "var(--neon-blue)";
+                if (data.code) {
+                    currentCode = data.code;
+                    codeBox.innerText = data.code;
+                    codeBox.style.display = 'block';
+                    btn.innerText = 'CODE GENERATED';
                 } else {
-                    hint.innerText = data.error || "Link Failure.";
-                    hint.style.color = "var(--neon-pink)";
+                    alert(data.error);
+                    btn.innerText = 'TRY AGAIN'; btn.disabled = false;
                 }
-            } catch(e) {
-                hint.innerText = "Network execution error timeout.";
-            } finally {
-                btn.disabled = false;
-                btn.innerText = "INITIALIZE PAIR LINK";
+            } catch (err) {
+                alert('Server error!');
+                btn.innerText = 'GENERATE PAIR CODE'; btn.disabled = false;
             }
         }
 
-        function copyClipboard() {
-            if(!fetchedPairCode) return;
-            navigator.clipboard.writeText(fetchedPairCode).then(() => {
-                const hint = document.getElementById('hintLabel');
-                const box = document.getElementById('termBox');
-                hint.innerText = "CODE COPIED TO SYSTEM CLIPBOARD NODE!";
-                hint.style.color = "var(--neon-pink)";
-                box.style.borderColor = "var(--neon-pink)";
-                
-                setTimeout(() => {
-                    hint.innerText = "TAP THE BOX TO COPY ACCESS DECREE.";
-                    hint.style.color = "var(--neon-blue)";
-                    box.style.borderColor = "rgba(255,255,255,0.1)";
-                }, 2500);
-            });
+        function copyCode() {
+            if (!currentCode) return;
+            navigator.clipboard.writeText(currentCode);
+            document.getElementById('codeBox').innerText = 'COPIED!';
+            setTimeout(() => document.getElementById('codeBox').innerText = currentCode, 2000);
         }
     </script>
 </body>
