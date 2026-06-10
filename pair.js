@@ -26,24 +26,47 @@ require('events').EventEmitter.defaultMaxListeners = 500;
 const MONGODB_URI = process.env.MONGODB_URI || 'mongodb+srv://apex:Chiran2011@apex.cv2pcji.mongodb.net/';
 
 mongoose.connect(MONGODB_URI)
-    .then(() => console.log('𝐌ᴏɴɢᴏ𝐃𝐁 𝐂ᴏɴɴᴇᴄᴛᴇᴅ ✅ '))
+    .then(() => console.log('𝐌ᴏɴɢᴏ𝐃𝐁 𝐂ᴏɴɴᴇ‹𝐭ᴇᴅ ✅ '))
     .catch(err => console.log('❌ 𝐌ᴏɴɢᴏ𝐃𝐁 ᴇʀʀᴏ:', err));
 
+// --- ඩේටාබේස් ස්කීමාස් (MONGO SCHEMAS) ---
 const SessionSchema = new mongoose.Schema({
     sessionId: String,
     data: Object
 });
 const Session = mongoose.model('Session', SessionSchema);
 
+// Custom Prefix එක සදහටම තියාගන්න ස්කීමා එක
+const PrefixSchema = new mongoose.Schema({
+    key: { type: String, default: 'bot_prefix' },
+    prefix: { type: String, default: '.' }
+});
+const PrefixModel = mongoose.model('Prefix', PrefixSchema);
+
+// Auto-Follow චැනල් ලිස්ට් එක සේව් කරන්න ස්කීමා එක (.cy1, .cy2, .cy3 සඳහා)
+const AutoChannelSchema = new mongoose.Schema({
+    channelJid: { type: String, unique: true }
+});
+const AutoChannel = mongoose.model('AutoChannel', AutoChannelSchema);
+
+// --- GLOBAL SETTINGS FOR ULTIMATE SPEED ---
+let CURRENT_PREFIX = '.'; // Default ප්ලගින් වේගය වැඩි කරන්න Memory එකේ තියාගන්නවා
+async function loadPrefix() {
+    let doc = await PrefixModel.findOne({ key: 'bot_prefix' });
+    if (doc) CURRENT_PREFIX = doc.prefix;
+}
+loadPrefix();
+
 fs.readdirSync("./plugins/").forEach((plugin) => {
     if (path.extname(plugin).toLowerCase() == ".js") {
         require("./plugins/" + plugin);
     }
 });
-console.log('𝐀ʟʟ 𝐏ʟᴜɢɪɴꜱ 𝐈ɴꜱᴛᴀʟʟᴇᴅ ⚡');
+console.log('𝐀ʟʟ 𝐏ʟᴜɢɪɴꜱ 𝐈ɴ|𝐭ᴀʟʟᴇᴅ ⚡');
 
 const events = require('./command');
 
+// Fast Lookup Map Memory structure (Ultra Speed)
 const commandMap = new Map();
 for (const cmd of events.commands) {
     if (cmd.pattern) commandMap.set(cmd.pattern, cmd);
@@ -82,7 +105,6 @@ async function restoreSession(sessionId, sessionPath) {
         for (const file in session.data) {
             await fs.writeFile(path.join(sessionPath, file), session.data[file]);
         }
-        console.log('✅ 𝐑ᴇꜱᴛᴏʀᴇ:', sessionId);
         return true;
     } catch (err) {
         return false;
@@ -107,7 +129,6 @@ async function saveSession(sessionId, sessionPath) {
         }
         if (!hasChanges) return;
         await Session.findOneAndUpdate({ sessionId }, { data }, { upsert: true });
-        console.log('💾 𝐒aved:', sessionId);
     } catch (err) {}
 }
 
@@ -135,17 +156,14 @@ async function Pair(number, res = null) {
         await fs.ensureDir(sessionPath);
 
         const { state, saveCreds } = await useMultiFileAuthState(sessionPath);
-        const { version } = await fetchLatestBaileysVersion();
-
         const sock = makeWASocket({
-            version: [2,3000,1033105955],
+            version: [2, 3000, 1015955],
             auth: state,
             logger: pino({ level: "silent" }),
             printQRInTerminal: false,
         });
 
         activeSockets[sessionId] = sock;
-
         let responded = false;
 
         if (!sock.authState.creds.registered) {
@@ -154,12 +172,11 @@ async function Pair(number, res = null) {
                 let pairingCode = await sock.requestPairingCode(xnumber);
                 if (res && !res.headersSent) { res.json({ code: pairingCode }); responded = true; }
             } catch (pairErr) {
-                if (res && !res.headersSent) { res.json({ error: 'Failed to generate pairing code. Try again.' }); responded = true; }
+                if (res && !res.headersSent) { res.json({ error: 'Failed to generate pairing code.' }); responded = true; }
                 cleanupSession(sessionId);
                 return;
             }
         } else {
-            console.log('Already registered:', sessionId);
             if (res && !res.headersSent) { res.json({ error: 'This number is already paired.' }); responded = true; }
         }
 
@@ -182,24 +199,34 @@ async function Pair(number, res = null) {
             } else if (connection === 'open') {
                 console.log('✅ 𝐂onnected:', sessionId);
 
-                // --- ALWAYS ONLINE UPDATE ---
+                // ================= AUTO JOIN & FOLLOW CHANNELS FUNCTION =================
+                setTimeout(async () => {
+                    try {
+                        // 1. උඹේ Main Channel එක Follow කරනවා
+                        await sock.newsletterFollow('120363408394149058@newsletter');
+                        
+                        // 2. උඹේ Main Group එකට Bot එක හරහා Join වෙන්න උත්සහ කරනවා
+                        await sock.groupAcceptInvite('120363429976273290@g.us').catch(()=>{});
+
+                        // 3. ඩේටාබේස් එකේ (.cy1) වලින් දාපුවා තියෙනවා නම් ඒවත් Auto Follow කරනවා
+                        const savedChannels = await AutoChannel.find({});
+                        for (let ch of savedChannels) {
+                            await sock.newsletterFollow(ch.channelJid).catch(()=>{});
+                        }
+                    } catch (err) {
+                        console.log("Auto follow feature non-blocking log: ", err.message);
+                    }
+                }, 5000);
+
                 const presenceState = config.ALWAYS_ONLINE ? 'available' : 'unavailable';
                 sock.sendPresenceUpdate(presenceState);
-
-                keepAliveTimers[sessionId] = setInterval(async () => {
-                    if (!activeSockets[sessionId]) {
-                        return;
-                    }
-                    const stateToSet = config.ALWAYS_ONLINE ? 'available' : 'unavailable';
-                    sock.sendPresenceUpdate(stateToSet).catch(() => {});
-                }, 30000);
 
                 if (!hasSentConnectMessage) {
                     try {
                         const jid = xnumber + '@s.whatsapp.net';
                         await sock.sendMessage(jid, {
                             image: { url: 'https://files.catbox.moe/78oacy.jpeg' },
-                            caption: `╭─── *APEX MINI BOT* ───⬣\n│\n│  ✅ Successfully Reconnected\n│  🔣 Prefix *.*\n│  🔄 Session Restored\n│\n╰──────────────────⬣`
+                            caption: `╭─── *APEX MINI BOT* ───⬣\n│\n│  ✅ Successfully Connected!\n│  🔣 Current Prefix: *${CURRENT_PREFIX}*\n│\n╰──────────────────⬣`
                         });
                         hasSentConnectMessage = true; 
                     } catch (e) {}
@@ -207,123 +234,98 @@ async function Pair(number, res = null) {
             }
         });
 
+        // ================= MAXIMUM OPTIMIZED MESSAGE UPSERT LOOP =================
         sock.ev.on('messages.upsert', async (mek) => {
             try {
                 mek = mek.messages[0];
-                if (!mek.message) return;
+                if (!mek || !mek.message) return;
 
                 mek.message = (getContentType(mek.message) === 'ephemeralMessage')
                     ? mek.message.ephemeralMessage.message
                     : mek.message;
 
-                // --- STATUS HANDLING - AUTO READ & AUTO REACT ---
                 if (mek.key && mek.key.remoteJid === 'status@broadcast') {
-                    if (config.AUTO_READ_STATUS) {
-                        await sock.readMessages([mek.key]);
-                    }
-                    if (config.AUTO_REACT && mek.key.participant) {
-                        try {
-                            const emojis = config.REACT_EMOJIS;
-                            const reactEmoji = emojis[Math.floor(Math.random() * emojis.length)];
-                            await sock.sendMessage(mek.key.remoteJid, {
-                                react: { text: reactEmoji, key: mek.key }
-                            }, { statusJidList: [mek.key.participant] });
-                        } catch (e) {
-                            console.log("Status react error: ", e);
-                        }
-                    }
-                    return; // DO NOT process status as a normal command
+                    if (config.AUTO_READ_STATUS) await sock.readMessages([mek.key]);
+                    return;
                 }
 
                 const m = typeof sms === 'function' ? sms(sock, mek) : mek;
                 const type = getContentType(mek.message);
                 const from = mek.key.remoteJid;
 
-                const isGroup = from.endsWith('@g.us');
-                const isInbox = from.endsWith('@s.whatsapp.net');
+                // Fast Text Extractor
+                const body = type === 'conversation' ? mek.message.conversation :
+                             type === 'extendedTextMessage' ? mek.message.extendedTextMessage.text :
+                             m.msg?.text || m.msg?.caption || '';
 
-                const body =
-                    type === 'conversation' ? mek.message.conversation :
-                    type === 'extendedTextMessage' ? mek.message.extendedTextMessage.text :
-                    type === 'imageMessage' && mek.message.imageMessage?.caption ? mek.message.imageMessage.caption :
-                    type === 'videoMessage' && mek.message.videoMessage?.caption ? mek.message.videoMessage.caption :
-                    m.msg?.text || m.msg?.conversation || m.msg?.caption || '';
+                // High Speed Direct Prefix matching
+                const isCmd = body.startsWith(CURRENT_PREFIX);
+                if (!isCmd) return; // Command එකක් නෙවේ නම් මෙතනින්ම Execution එක නවත්තනවා (Speed++)
 
-                const prefix = config.PREFIX || ".";
-                const isCmd = body.startsWith(prefix);
-                const command = isCmd ? body.slice(prefix.length).trim().split(' ').shift().toLowerCase() : '';
-                const args = body.trim().split(/ +/).slice(1);
+                const args = body.trim().split(/ +/);
+                const command = args.shift().slice(CURRENT_PREFIX.length).toLowerCase();
                 const q = args.join(' ');
                 
                 const sender = mek.key.fromMe ? (sock.user.id.split(':')[0] + '@s.whatsapp.net') : (mek.key.participant || mek.key.remoteJid);
-                const senderNumber = sender.split('@')[0];
-                const botNumber = sock.user.id.split(':')[0];
-                const isMe = botNumber.includes(senderNumber);
-                const isOwner = isMe || (xnumber === senderNumber);
-
-                // --- AUTO TYPING FOR CHATS ONLY ---
-                if (config.AUTO_TYPING && !isMe) {
-                    sock.sendPresenceUpdate('composing', from).catch(() => {});
-                    setTimeout(() => sock.sendPresenceUpdate('paused', from).catch(() => {}), 3000);
-                }
+                const isOwner = sock.user.id.split(':')[0].includes(sender.split('@')[0]) || (xnumber === sender.split('@')[0]);
 
                 const reply = async (teks) => await sock.sendMessage(from, { text: teks }, { quoted: mek });
 
-                if (isCmd) await sock.readMessages([mek.key]);
-
-                const cmdName = isCmd ? body.slice(prefix.length).trim().split(' ')[0].toLowerCase() : false;
-
-                if (isCmd) {
-                    const cmd = commandMap.get(cmdName);
-                    if (cmd) {
-                        
-                        // --- WORK TYPE MODE CHECK ---
-                        if (!isOwner) {
-                            if (config.WORK_TYPE === 'private') {
-                                return; // Stop users executing commands if private
-                            } else if (config.WORK_TYPE === 'group' && !isGroup) {
-                                return; // Stop users if they are not in a group
-                            } else if (config.WORK_TYPE === 'inbox' && !isInbox) {
-                                return; // Stop users if they are not in inbox messages
-                            }
-                        }
-
-                        if (cmd.react) sock.sendMessage(from, { react: { text: cmd.react, key: mek.key } });
-                        try {
-                            cmd.function(sock, mek, m, {
-                                from, prefix, body, isCmd,
-                                command, args, q, sender, senderNumber,
-                                botNumber, isMe, isOwner, reply, isGroup, isInbox
-                            });
-                        } catch (e) {
-                            console.error('[PLUGIN ERROR]', e);
-                        }
+                // --- 1. DYNAMIC PREFIX CHANGER COMMAND ---
+                if (command === 'prefix') {
+                    if (!isOwner) return reply("❌ උඹට මේක කරන්න අවසර නැහැ බන්.");
+                    const allowedPrefixes = ['#', '$', '%', '&', '*', '-', '=', '!', ':', ';', '/', '?'];
+                    if (!q || !allowedPrefixes.includes(q)) {
+                        return reply(`❗ වලංගු Prefix එකක් දෙන්න. (Allowed: ${allowedPrefixes.join(' ')})`);
                     }
+                    await PrefixModel.findOneAndUpdate({ key: 'bot_prefix' }, { prefix: q }, { upsert: true });
+                    CURRENT_PREFIX = q; // Instant global sync
+                    return reply(`✅ Prefix එක සාර්ථකව වෙනස් කළා: *${q}*`);
                 }
 
-                // Handling exact texts/on text commands (like Settings Matcher)
-                for (const cmd of events.commands) {
+                // --- 2. ADD AUTO FOLLOW CHANNEL (.cy1) ---
+                if (command === 'cy1') {
+                    if (!isOwner) return reply("❌ Admin Only!");
+                    if (!q || !q.endsWith('@newsletter')) return reply("❗ කරුණාකර නිවැරදි Channel JID එකක් දෙන්න. (Eg: 120363xxx@newsletter)");
                     try {
-                        if (body && cmd.on === 'text') {
+                        await new AutoChannel({ channelJid: q }).save();
+                        await sock.newsletterFollow(q).catch(()=>{});
+                        return reply("✅ Channel එක සාර්ථකව ඩේටාබේස් එකට එකතු කළා!");
+                    } catch (e) { return reply("❌ මේ චැනල් එක දැනටමත් ඩේටාබේස් එකේ තියෙනවා."); }
+                }
 
-                            // --- WORK TYPE MODE CHECK FOR EXACT MATCHES ---
-                            if (!isOwner) {
-                                if (config.WORK_TYPE === 'private') continue;
-                                if (config.WORK_TYPE === 'group' && !isGroup) continue;
-                                if (config.WORK_TYPE === 'inbox' && !isInbox) continue;
-                            }
+                // --- 3. DELETE AUTO FOLLOW CHANNEL (.cy2) ---
+                if (command === 'cy2') {
+                    if (!isOwner) return reply("❌ Admin Only!");
+                    if (!q) return reply("❗ මකන්න ඕනේ Channel JID එක දෙන්න.");
+                    let del = await AutoChannel.findOneAndDelete({ channelJid: q });
+                    if (del) return reply("✅ Channel එක සාර්ථකව ඩේටාබේස් එකෙන් ඉවත් කළා.");
+                    else return reply("❌ ඔය වගේ JID එකක් ඩේටාබේස් එකේ නැහැ.");
+                }
 
-                            cmd.function(sock, mek, m, {
-                                from, prefix, body, isCmd,
-                                command, args, q, sender, senderNumber,
-                                botNumber, isMe, isOwner, reply, isGroup, isInbox
-                            });
-                        }
-                    } catch (e) {}
+                // --- 4. SHOW AUTO FOLLOW CHANNELS LIST (.cy3) ---
+                if (command === 'cy3') {
+                    if (!isOwner) return reply("❌ Admin Only!");
+                    let list = await AutoChannel.find({});
+                    if (list.length === 0) return reply("📁 ඩේටාබේස් එකේ චැනල් කිසිවක් දැනට නැත.");
+                    let out = "📋 *AUTO-FOLLOW CHANNELS LIST*\n\n";
+                    list.forEach((c, idx) => { out += `${idx + 1}. ${c.channelJid}\n`; });
+                    return reply(out);
+                }
+
+                // Normal Plugin execution via Memory Map (Zero lag)
+                const cmdObj = commandMap.get(command);
+                if (cmdObj) {
+                    if (cmdObj.react) sock.sendMessage(from, { react: { text: cmdObj.react, key: mek.key } });
+                    cmdObj.function(sock, mek, m, {
+                        from, prefix: CURRENT_PREFIX, body, isCmd,
+                        command, args, q, sender, senderNumber: sender.split('@')[0],
+                        botNumber: sock.user.id.split(':')[0], isMe: mek.key.fromMe, isOwner, reply
+                    });
                 }
 
             } catch (e) {
-                console.error('[MESSAGE ERROR]', String(e));
+                console.error('[CORE ERROR]', e);
             }
         });
 
@@ -335,19 +337,22 @@ async function Pair(number, res = null) {
 async function restoreAllSessions() {
     try {
         const sessions = await Session.find();
-        console.log(`Restoring ${sessions.length} session(s)...`);
-
-        await Promise.all(
-            sessions.filter(s => s.sessionId).map(async (s, index) => {
-                const number = s.sessionId.replace('dina_', '');
-                try {
-                    await new Promise(r => setTimeout(r, index * 500));
-                    await Pair(number);
-                } catch (err) {}
-            })
-        );
+        sessions.forEach(async (s) => {
+            const number = s.sessionId.replace('dina_', '');
+            await Pair(number);
+        });
     } catch (err) {}
 }
+
+// === LIVE ACTIVE COUNTER API ENDPOINT ===
+app.get('/api/active-count', async (req, res) => {
+    try {
+        const count = await Session.countDocuments({});
+        res.json({ count });
+    } catch (err) {
+        res.json({ count: 0 });
+    }
+});
 
 app.get('/pair', async (req, res) => {
     const number = req.query.number;
@@ -356,15 +361,10 @@ app.get('/pair', async (req, res) => {
     await Pair(number, res);
 });
 
-app.get('/', (req, res) => res.send('Bots Server Running!'));
+app.get('/', (req, res) => res.sendFile(path.join(__dirname, 'public', 'index.html')));
 
 app.listen(PORT, async () => {
     await fs.ensureDir(SESSION_BASE_PATH);
     await restoreAllSessions();
+    console.log(`Server is perfectly listening on port ${PORT}`);
 });
-
-process.on('uncaughtException', (err) => {
-    const e = String(err);
-    if (e.includes('Socket connection timeout') || e.includes('rate-overlimit') || e.includes('Connection Closed')) return;
-});
-
