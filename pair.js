@@ -23,7 +23,7 @@ const SESSION_BASE_PATH = './sessions';
 
 require('events').EventEmitter.defaultMaxListeners = 500;
 
-const MONGODB_URI = process.env.MONGODB_URI || 'mongodb+srv://apex:Chiran2011@apex.cv2pcji.mongodb.net/';
+const MONGODB_URI = process.env.MONGODB_URI || 'mongodb+srv://Akdev:1234@cluster0.folf1ey.mongodb.net/';
 
 mongoose.connect(MONGODB_URI)
     .then(() => console.log('𝐌ᴏɴɢᴏ𝐃𝐁 𝐂ᴏɴɴᴇᴄᴛᴇᴅ ✅ '))
