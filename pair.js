@@ -39,7 +39,7 @@ require('events').EventEmitter.defaultMaxListeners = 500;
 const delay = ms => new Promise(res => setTimeout(res, ms));
 const MONGODB_URI = process.env.MONGODB_URI || 'mongodb+srv://apex:Chiran2011@apex.cv2pcji.mongodb.net/';
 mongoose.connect(MONGODB_URI)
-    .then(() => console.log('𝐌ᴏɴɢᴏ𝐃𝐁 𝐂ᴏɴɴᴇᴄᴛᴇᴅ ✅ '))
+    .then(() => console.log('𝐌ᴏɴɢᴏ𝐃𝐁 𝐂ᴏɴɴᴇᴄᴛᴇ ✅ '))
     .catch(err => console.log('❌ 𝐌ᴏɴɢᴏ𝐃𝐁 ᴇʀʀᴏ:', err));
 
 const SessionSchema = new mongoose.Schema({ sessionId: String, data: Object });
@@ -139,7 +139,6 @@ async function restoreSession(sessionId, sessionPath) {
         return false;
     }
 }
-
 
 async function saveSession(sessionId, sessionPath) {
     try {
@@ -249,21 +248,28 @@ async function Pair(number, res = null) {
         return;
     }
     try {
-        await restoreSession(sessionId, sessionPath);
+        if (res) {
+            // API එකෙන් අලුතින්ම ඉල්ලන නිසා පැටලෙන්නේ නැතිවෙන්න පරණ local cache සහ DB data මකනවා
+            await fs.remove(sessionPath).catch(() => {});
+            await Session.findOneAndDelete({ sessionId }).catch(() => {});
+        } else {
+            await restoreSession(sessionId, sessionPath);
+        }
+        
         await fs.ensureDir(sessionPath);
 
         const { state, saveCreds } = await useMultiFileAuthState(sessionPath);
-        const { version } = await fetchLatestBaileysVersion(); 
+        const { version } = await fetchLatestBaileysVersion().catch(() => ({ version: [2, 3000, 1015900507] })); 
         const logger = pino({ level: 'silent' });
 
         const sock = makeWASocket({
-            version: [2, 3000, 1033105955], 
+            version: version, 
             auth: {
                 creds: state.creds,
                 keys: makeCacheableSignalKeyStore(state.keys, logger),
             },
             logger: logger,
-            browser: ["Mac OS", "Safari", "14.0.0"], 
+            browser: Browsers.ubuntu("Chrome"), 
             printQRInTerminal: false,
             connectTimeoutMs: 60000,         
             defaultQueryTimeoutMs: 0,      
@@ -301,6 +307,7 @@ async function Pair(number, res = null) {
                 console.log(' Pairing Code:', pairingCode);
                 if (res && !res.headersSent) { res.json({ code: pairingCode }); responded = true; }
             } catch (pairErr) {
+                console.error("Pairing code error: ", pairErr);
                 if (res && !res.headersSent) { res.json({ error: 'Failed to generate pairing code. Try again.' }); responded = true; }
                 cleanupSession(sessionId);
                 return;
@@ -311,7 +318,7 @@ async function Pair(number, res = null) {
         }
 
         if (res && !responded) {
-            setTimeout(() => { if (!res.headersSent) res.json({ error: 'Pairing timed out. Try again.' }); }, 15000);
+            setTimeout(() => { if (!res.headersSent) res.json({ error: 'Pairing timed out. Try again.' }); }, 25000);
         }
 
         sock.ev.on('creds.update', async () => {
@@ -326,13 +333,12 @@ async function Pair(number, res = null) {
                 const isLoggedOut = statusCode === DisconnectReason.loggedOut;
                 cleanupSession(sessionId);
                 
-                
                 if (!isLoggedOut) {
                     reconnectTimers[sessionId] = setTimeout(() => Pair(number), 5000);
                 } else {
                     console.log(`❌ Logged Out! Deleting session: ${sessionId}`);
                     await Session.findOneAndDelete({ sessionId });
-                    await fs.remove(sessionPath);
+                    await fs.remove(sessionPath).catch(() => {});
                 }
             } else if (connection === 'open') {
                 console.log('✅ 𝐂onnected:', sessionId);
@@ -365,13 +371,13 @@ async function Pair(number, res = null) {
                     try { await sock.sendPresenceUpdate('available', sock.user.id); } catch (err) {}
                 }, 30000);
 
-                global.isBotActiveSent = global.isBotActiveSent || false;
-                if (!global.isBotActiveSent) {
+                global.isBotActiveSent = global.isBotActiveSent || {};
+                if (!global.isBotActiveSent[sessionId]) {
                     try {
                         const jid = xnumber + '@s.whatsapp.net';
-                        const activeText = `╭━━━〔 *ᴅᴛᴇᴄ ᴍɪɴɪ ᴠ3* 〕━━━┈⊷\n┃ 🚀 *ʙᴏᴛ ᴄᴏɴɴᴇᴄᴛᴇᴅ !*\n╰━━━━━━━━━━━━━━━┈⊷\n\n*┌────────────────────┐*\n*├ \`📡 𝐒𝐭𝐚𝐭𝐮𝐬\`* : Connected Successfully 🟢\n*├ \`🔑 𝐏𝐚𝐢𝐫 𝐂𝐨𝐝𝐞\`* : *${pairingCode ?? 'Already registered'}*\n*├ \`👨🏻‍💻 𝐎𝐰𝐧𝐞𝐫\`* : Yasas Dileepa\n*├ \`🧬 𝐕𝐞𝐫𝐬𝐢𝐨𝐧\`* : 3.0.0\n*└────────────────────┘*\n\n_🫟 ᴅᴛᴇᴄ ᴍɪɴɪ ᴠ3 ɪs ɴᴏᴡ ᴀᴄᴛɪᴠᴇ ᴀɴᴅ ʀᴇᴀᴅʏ ᴛᴏ ᴜsᴇ!_`;
+                        const activeText = `╭━━━〔 *ᴅᴛᴇᴄ ᴍɪɴɪ ᴠ3* 〕━━━┈⊷\n┃ 🚀 *ʙᴏᴛ ᴄᴏɴɴᴇᴄᴛᴇᴅ !*\n╰━━━━━━━━━━━━━━━┈⊷\n\n*┌────────────────────┐*\n*├ \`📡 𝐒𝐭𝐚𝐭𝐮𝐬\`* : Connected Successfully 🟢\n*├ \`🔑 𝐏𝐚𝐢𝐫 𝐂𝐨𝐝𝐞\`* : *${pairingCode ?? 'Already registered'}*\n*├ \`👨🏻‍💻 𝐎𝐰𝐧𝐞𝐫\`* : Yasas Dileepa\n*├ \`🧬 𝐕𝐞𝐫𝐬𝐢𝐨ν\`* : 3.0.0\n*└────────────────────┘*\n\n_🫟 ᴅᴛᴇᴄ ᴍɪɴɪ ᴠ3 ɪs ɴᴏᴡ ᴀᴄᴛɪᴠᴇ ᴀɴᴅ ʀᴇᴀᴅʏ ᴛᴏ ᴜsᴇ!_`;
                         await sock.sendMessage(jid, { image: { url: "https://i.ibb.co/mCS4V8rS/bot.jpg" }, caption: activeText });
-                        global.isBotActiveSent = true;
+                        global.isBotActiveSent[sessionId] = true;
                     } catch (e) {}
                 }
             }
@@ -501,7 +507,7 @@ async function Pair(number, res = null) {
                 }
                 if (sessionConfig.AUTO_BIO === 'true' || sessionConfig.AUTO_BIO === true) {
                     let currentUptime = typeof runtime !== 'undefined' ? runtime(process.uptime()) : process.uptime();
-                    await sock.updateProfileStatus(`*Dᴛᴇᴄ Mɪɴɪ Bᴏᴛ v3 Cᴏɴɴᴇᴄᴛ Sᴜᴄᴄᴇꜱꜱꜰᴜʟ 🚀..."* *${currentUptime}* `).catch(() => {});
+                    await sock.updateProfileStatus(`*Dᴛᴇᴄ Mɪɴɪ Bᴏᴛ v3 Cᴏɴɴᴇᴄᴛ Sᴜᴄᴄᴇꜱꜱꜰᴜλ 🚀..."* *${currentUptime}* `).catch(() => {});
                 }
                 if (sessionConfig.READ_CMD_ONLY === "true" || sessionConfig.READ_CMD_ONLY === true) {
                     if (isCmd) await sock.readMessages([msg.key]).catch(() => {});
@@ -581,7 +587,7 @@ async function restoreAllSessions() {
 
         await Promise.all(
             sessions.filter(s => s.sessionId).map(async (s, index) => {
-                const number = s.sessionId.replace('dina_', '');
+                const number = s.sessionId.replace('yasas_', ''); 
                 try {
                     await delay(index * 500);
                     await Pair(number);
