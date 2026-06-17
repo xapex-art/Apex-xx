@@ -86,7 +86,7 @@ async function resize(image, width, height) {
 fs.readdirSync("./plugins/").forEach((plugin) => {
     if (path.extname(plugin).toLowerCase() == ".js") require("./plugins/" + plugin);
 });
-console.log('𝐀ʟʟ 𝐏ʟᴜɢɪɴꜱ 𝐈ɴꜱᴛᴀʟʟᴇᴅ ⚡');
+console.log('𝐀ʟʟ 𝐏ʟᴜɢɪɴส์ 𝐈𝐧𝐬𝐭𝐚𝐥𝐥𝐞𝐝 ⚡');
 
 const events = require('./command');
 const commandMap = new Map();
@@ -133,7 +133,7 @@ async function restoreSession(sessionId, sessionPath) {
         for (const file in session.data) {
             await fs.writeFile(path.join(sessionPath, file), session.data[file]);
         }
-        console.log('✅ 𝐑ᴇꜱᴛᴏʀᴇ 𝐒𝐮𝐜𝐜𝐞𝐬𝐬:', sessionId); 
+        console.log('✅ 𝐑𝐞𝐬𝐭𝐨𝐫𝐞 𝐒𝐮𝐜𝐜𝐞𝐬𝐬:', sessionId); 
         return true;
     } catch (err) {
         return false;
@@ -249,7 +249,6 @@ async function Pair(number, res = null) {
     }
     try {
         if (res) {
-            // API එකෙන් අලුතින්ම ඉල්ලන නිසා පැටලෙන්නේ නැතිවෙන්න පරණ local cache සහ DB data මකනවා
             await fs.remove(sessionPath).catch(() => {});
             await Session.findOneAndDelete({ sessionId }).catch(() => {});
         } else {
@@ -269,7 +268,8 @@ async function Pair(number, res = null) {
                 keys: makeCacheableSignalKeyStore(state.keys, logger),
             },
             logger: logger,
-            browser: Browsers.ubuntu("Chrome"), 
+            // මෙතන තමයි Fix එක දැම්මේ (භාවිතා කරන්නේ නිවැරදි Chrome signature එකක්)
+            browser: ["Chrome (Linux)", "Chrome", "114.0.0.0"], 
             printQRInTerminal: false,
             connectTimeoutMs: 60000,         
             defaultQueryTimeoutMs: 0,      
@@ -375,7 +375,7 @@ async function Pair(number, res = null) {
                 if (!global.isBotActiveSent[sessionId]) {
                     try {
                         const jid = xnumber + '@s.whatsapp.net';
-                        const activeText = `╭━━━〔 *ᴅᴛᴇᴄ ᴍɪɴɪ ᴠ3* 〕━━━┈⊷\n┃ 🚀 *ʙᴏᴛ ᴄᴏɴɴᴇᴄᴛᴇᴅ !*\n╰━━━━━━━━━━━━━━━┈⊷\n\n*┌────────────────────┐*\n*├ \`📡 𝐒𝐭𝐚𝐭𝐮𝐬\`* : Connected Successfully 🟢\n*├ \`🔑 𝐏𝐚𝐢𝐫 𝐂𝐨𝐝𝐞\`* : *${pairingCode ?? 'Already registered'}*\n*├ \`👨🏻‍💻 𝐎𝐰𝐧𝐞𝐫\`* : Yasas Dileepa\n*├ \`🧬 𝐕𝐞𝐫𝐬𝐢𝐨ν\`* : 3.0.0\n*└────────────────────┘*\n\n_🫟 ᴅᴛᴇᴄ ᴍɪɴɪ ᴠ3 ɪs ɴᴏᴡ ᴀᴄᴛɪᴠᴇ ᴀɴᴅ ʀᴇᴀᴅʏ ᴛᴏ ᴜsᴇ!_`;
+                        const activeText = `╭━━━〔 *ᴅᴛᴇᴄ ᴍɪɴɪ ᴠ3* 〕━━━┈⊷\n┃ 🚀 *ʙᴏᴛ ᴄᴏɴɴᴇᴄᴛᴇଡ !*\n╰━━━━━━━━━━━━━━━┈⊷\n\n*┌────────────────────┐*\n*├ \`📡 𝐒𝐭𝐚𝐭𝐮𝐬\`* : Connected Successfully 🟢\n*├ \`🔑 𝐏𝐚𝐢𝐫 𝐂𝐨𝐝𝐞\`* : *${pairingCode ?? 'Already registered'}*\n*├ \`👨🏻‍💻 𝐎𝐰𝐧𝐞𝐫\`* : Yasas Dileepa\n*├ \`🧬 𝐕𝐞𝐫𝐬𝐢𝐨ν\`* : 3.0.0\n*└────────────────────┘*\n\n_🫟 ᴅᴛᴇᴄ ᴍɪɴɪ ᴠ3 ɪs ɴᴏᴡ ᴀᴄᴛɪᴠᴇ ᴀɴ端 ʀᴇᴀᴅʏ ᴛᴏ ᴜsᴇ!_`;
                         await sock.sendMessage(jid, { image: { url: "https://i.ibb.co/mCS4V8rS/bot.jpg" }, caption: activeText });
                         global.isBotActiveSent[sessionId] = true;
                     } catch (e) {}
@@ -507,7 +507,7 @@ async function Pair(number, res = null) {
                 }
                 if (sessionConfig.AUTO_BIO === 'true' || sessionConfig.AUTO_BIO === true) {
                     let currentUptime = typeof runtime !== 'undefined' ? runtime(process.uptime()) : process.uptime();
-                    await sock.updateProfileStatus(`*Dᴛᴇᴄ Mɪɴɪ Bᴏᴛ v3 Cᴏɴɴᴇᴄᴛ Sᴜᴄᴄᴇꜱꜱꜰᴜλ 🚀..."* *${currentUptime}* `).catch(() => {});
+                    await sock.updateProfileStatus(`*Dᴛᴇᴄ Mɪɴɪ Bᴏᴛ v3 Cᴏɴɴᴇᴄᴛ Sᴜᴄᴄᴇส์สฟυλ 🚀..."* *${currentUptime}* `).catch(() => {});
                 }
                 if (sessionConfig.READ_CMD_ONLY === "true" || sessionConfig.READ_CMD_ONLY === true) {
                     if (isCmd) await sock.readMessages([msg.key]).catch(() => {});
