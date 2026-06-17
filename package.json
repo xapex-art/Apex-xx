@@ -1,14 +1,14 @@
 {
-  "name": "dina-bot",
-  "version": "1.0.0",
-  "description": "Multi-session WhatsApp Bot with Plugin System",
+  "name": "dtec-mini-v4",
+  "version": "3.0.0",
+  "description": "Multi-session WhatsApp Bot with Advanced Plugin System",
   "main": "pair.js",
   "scripts": {
     "start": "node pair.js",
     "dev": "nodemon pair.js"
   },
   "dependencies": {
-    "@whiskeysockets/baileys": "github:XdKing2/malvin-baileys",
+    "@whiskeysockets/baileys": "github:XdKing2/Malvin-Baileys",
     "axios": "^1.6.0",
     "express": "^4.18.2",
     "file-type": "^16.5.4",
@@ -20,7 +20,14 @@
     "qrcode-terminal": "^0.12.0",
     "yt-search": "^2.10.4",
     "fluent-ffmpeg": "^2.1.2",
-    "ffmpeg-static": "^5.1.0"
+    "ffmpeg-static": "^5.2.0",
+    "g-i-s": "^2.1.6",
+    "moment-timezone": "^0.5.43",
+    "sadaslk-dlcore": "latest",
+    "form-data": "^4.0.0",
+    "node-fetch": "^2.7.0",
+    "cheerio": "^1.0.0-rc.12",
+    "dxz-ytdl": "latest"
   },
   "devDependencies": {
     "nodemon": "^3.0.2"
